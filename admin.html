@@ -393,6 +393,10 @@
                 <input type="text" id="schoolName" placeholder="e.g. Riverside High School">
             </div>
             <div class="form-group">
+                <label for="eventName">Event / Session Name</label>
+                <input type="text" id="eventName" placeholder="e.g. Year 7–10 Student Progress Meetings">
+            </div>
+            <div class="form-group">
                 <label for="schoolLogo">School Logo</label>
                 <input type="file" id="schoolLogo" accept="image/*">
                 <div class="logo-preview-wrap" id="logoPreviewWrap"></div>
@@ -416,7 +420,10 @@
             <p class="preview-label">Preview</p>
             <div class="preview-bar" id="previewBar" style="background:#1565C0; color:#FFFFFF;">
                 <img id="previewLogo" src="" alt="">
-                <span id="previewName">Your School Name</span>
+                <div>
+                    <div id="previewName" style="font-weight:600;line-height:1.2;">Your School Name</div>
+                    <div id="previewEvent" style="font-size:0.8em;opacity:0.8;line-height:1.2;"></div>
+                </div>
             </div>
         </div>
     </section>
@@ -547,9 +554,11 @@
     // ── Branding preview ─────────────────────────────────────────────
     function updateBrandingPreview() {
         const name    = document.getElementById('schoolName').value || 'Your School Name';
+        const event   = document.getElementById('eventName').value;
         const primary = document.getElementById('primaryColour').value;
         const sec     = document.getElementById('secondaryColour').value;
         document.getElementById('previewName').textContent = name;
+        document.getElementById('previewEvent').textContent = event;
         document.getElementById('previewBar').style.background = primary;
         document.getElementById('previewBar').style.color = sec;
         document.getElementById('primaryHex').textContent = primary;
@@ -623,6 +632,7 @@
         const brk    = parseInt(document.getElementById('breakDuration').value) || 0;
         return {
             schoolName: document.getElementById('schoolName').value.trim(),
+            sessionName: document.getElementById('eventName').value.trim(),
             logoDataUrl,
             primaryColour:   document.getElementById('primaryColour').value,
             secondaryColour: document.getElementById('secondaryColour').value,
@@ -675,6 +685,7 @@
     function init() {
         const s = loadSettings();
         if (s.schoolName)         document.getElementById('schoolName').value = s.schoolName;
+        if (s.sessionName)        document.getElementById('eventName').value = s.sessionName;
         if (s.primaryColour)      document.getElementById('primaryColour').value = s.primaryColour;
         if (s.secondaryColour)    document.getElementById('secondaryColour').value = s.secondaryColour;
         if (s.startTime)          document.getElementById('startTime').value = s.startTime;
@@ -696,6 +707,7 @@
 
     // Event listeners
     document.getElementById('schoolName').addEventListener('input', updateBrandingPreview);
+    document.getElementById('eventName').addEventListener('input', updateBrandingPreview);
     document.getElementById('primaryColour').addEventListener('input', updateBrandingPreview);
     document.getElementById('secondaryColour').addEventListener('input', updateBrandingPreview);
     ['startTime','finishTime','interviewDuration','breakDuration'].forEach(id =>

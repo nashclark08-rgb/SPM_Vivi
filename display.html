@@ -401,9 +401,26 @@
             document.getElementById('watermark').src = cfg.logoDataUrl;
         }
 
-        // QR code pointing at rooms.html
-        const base     = window.location.href.replace(/[^/]*$/, '');
-        const roomsUrl = base + 'rooms.html';
+        // QR code — embed teacher data + timing in URL hash so phones (with empty localStorage) work
+        const base = window.location.href.replace(/[^/]*$/, '');
+        let roomsUrl = base + 'rooms.html';
+        try {
+            const teachers = JSON.parse(localStorage.getItem('pti_teachers') || '[]');
+            const payload = {
+                t:  teachers.map(t => ({ n: t.name || '', s: t.subject || '', r: t.room || '' })),
+                sn: cfg.schoolName    || '',
+                ev: cfg.sessionName   || '',
+                p:  cfg.primaryColour   || '#1565C0',
+                sc: cfg.secondaryColour || '#FFFFFF',
+                st: cfg.startTime          || '',
+                iv: cfg.interviewDuration  || 0,
+                bk: cfg.breakDuration      || 0,
+                ni: cfg.numberOfInterviews || 0
+            };
+            const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+            roomsUrl = base + 'rooms.html#' + encoded;
+        } catch(e) { /* fall back to plain URL */ }
+
         try {
             new QRCode(document.getElementById('qrcode'), {
                 text: roomsUrl,
@@ -411,7 +428,7 @@
                 height: 148,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M
+                correctLevel: QRCode.CorrectLevel.L
             });
         } catch (e) {
             document.getElementById('qrWrap').style.display = 'none';

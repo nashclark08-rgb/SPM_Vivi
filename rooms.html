@@ -25,44 +25,88 @@
         .hdr {
             background: var(--primary);
             color: var(--secondary);
-            padding: 1.1rem 1.25rem;
+            padding: 1rem 1.25rem;
             display: flex;
             align-items: center;
             gap: 0.85rem;
             flex-shrink: 0;
         }
-        .hdr img {
-            height: 42px;
-            width: auto;
-            display: none;
-            border-radius: 3px;
+        .hdr img { height: 40px; width: auto; display: none; border-radius: 3px; }
+        .hdr-text h1 { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+        .hdr-text p  { font-size: 0.78rem; opacity: 0.8; margin-top: 0.1rem; }
+
+        /* ── Timer banner ────────────────────── */
+        .timer-banner {
+            margin: 1rem 1rem 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
-        .hdr-text h1 {
-            font-size: 1.05rem;
-            font-weight: 600;
-            line-height: 1.2;
+
+        .timer-banner-inner {
+            background: var(--primary);
+            color: var(--secondary);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: background 0.5s, color 0.5s;
         }
-        .hdr-text p {
-            font-size: 0.78rem;
+
+        .timer-banner-inner.break {
+            background: var(--secondary);
+            color: var(--primary);
+        }
+
+        .timer-status {
+            flex: 1;
+        }
+        .timer-status .label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
             opacity: 0.8;
-            margin-top: 0.15rem;
         }
+        .timer-status .next {
+            font-size: 0.8rem;
+            margin-top: 0.2rem;
+            opacity: 0.85;
+        }
+
+        .timer-digits {
+            font-size: 2.8rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            -webkit-text-stroke: 1px rgba(255,255,255,0.4);
+            paint-order: stroke fill;
+        }
+
+        .timer-banner-inner.break .timer-digits {
+            -webkit-text-stroke: 1px rgba(0,0,0,0.1);
+        }
+
+        /* Waiting / complete states */
+        .timer-banner-inner.waiting  { background: #37474F; color: #FFFFFF; }
+        .timer-banner-inner.complete { background: #2E7D32; color: #FFFFFF; }
 
         /* ── Content ────────────────────────── */
         .content {
             flex: 1;
-            padding: 1.1rem 1rem 2rem;
+            padding: 1rem 1rem 2rem;
             max-width: 720px;
             margin: 0 auto;
             width: 100%;
         }
 
         .page-title {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 600;
             color: #616161;
-            margin-bottom: 0.9rem;
-            padding-bottom: 0.5rem;
+            margin-bottom: 0.85rem;
+            padding-bottom: 0.45rem;
             border-bottom: 2px solid var(--primary);
         }
 
@@ -74,67 +118,41 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 
-        thead {
-            background: var(--primary);
-            color: var(--secondary);
-        }
-
+        thead { background: var(--primary); color: var(--secondary); }
         thead th {
-            padding: 0.7rem 1rem;
+            padding: 0.65rem 0.9rem;
             text-align: left;
-            font-size: 0.75rem;
-            font-weight: 600;
+            font-size: 0.72rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        tbody tr {
-            border-bottom: 1px solid #F0F0F0;
-        }
+        tbody tr { border-bottom: 1px solid #F0F0F0; }
         tbody tr:last-child { border-bottom: none; }
         tbody tr:nth-child(even) { background: #FAFAFA; }
-
-        tbody td {
-            padding: 0.8rem 1rem;
-            vertical-align: middle;
-        }
-
-        /* Teacher name bold */
+        tbody td { padding: 0.75rem 0.9rem; vertical-align: middle; }
         tbody td:first-child { font-weight: 600; }
-
-        /* Room highlighted */
-        tbody td:last-child {
-            font-weight: 600;
-            color: var(--primary);
-        }
+        tbody td:last-child  { font-weight: 600; color: var(--primary); }
 
         /* ── Empty state ─────────────────────── */
         .empty {
             background: white;
             border-radius: 8px;
-            padding: 3rem 1rem;
+            padding: 2.5rem 1rem;
             text-align: center;
             color: #9E9E9E;
             box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            font-size: 0.9rem;
         }
-        .empty p { font-size: 0.95rem; }
 
         /* ── Footer ─────────────────────────── */
-        .ftr {
-            height: 6px;
-            background: var(--primary);
-            margin-top: auto;
-        }
+        .ftr { height: 6px; background: var(--primary); margin-top: auto; }
 
-        /* ── Responsive ──────────────────────── */
         @media (max-width: 420px) {
-            thead th, tbody td { padding: 0.65rem 0.75rem; font-size: 0.85rem; }
+            thead th, tbody td { padding: 0.6rem 0.7rem; font-size: 0.83rem; }
         }
     </style>
 </head>
@@ -144,9 +162,20 @@
         <img id="hdrLogo" src="" alt="">
         <div class="hdr-text">
             <h1 id="hdrSchool">Parent Teacher Interviews</h1>
-            <p>Teacher Room Locations</p>
+            <p id="hdrEvent">Teacher Room Locations</p>
         </div>
     </header>
+
+    <!-- Compact timer -->
+    <div class="timer-banner" id="timerBanner" style="display:none">
+        <div class="timer-banner-inner waiting" id="timerInner">
+            <div class="timer-status">
+                <div class="label" id="timerLabel">Loading…</div>
+                <div class="next"  id="timerNext"></div>
+            </div>
+            <div class="timer-digits" id="timerDigits">--:--</div>
+        </div>
+    </div>
 
     <div class="content">
         <div class="page-title" id="pageTitle">Teacher Locations</div>
@@ -156,76 +185,169 @@
     <footer class="ftr"></footer>
 
     <script>
-        function loadSettings() {
-            try { return JSON.parse(localStorage.getItem('pti_settings')) || {}; } catch { return {}; }
+    // ── Decode hash data (set by display.html QR code) ────────────────
+    function getHashData() {
+        const hash = window.location.hash;
+        if (!hash || hash.length < 2) return null;
+        try {
+            const encoded = hash.startsWith('#') ? hash.slice(1) : hash;
+            return JSON.parse(decodeURIComponent(escape(atob(encoded))));
+        } catch(e) { return null; }
+    }
+
+    // ── Fallback: localStorage ────────────────────────────────────────
+    function fromStorage() {
+        try {
+            const s = JSON.parse(localStorage.getItem('pti_settings') || '{}');
+            const t = JSON.parse(localStorage.getItem('pti_teachers') || '[]');
+            return {
+                t:  t.map(x => ({ n: x.name, s: x.subject, r: x.room })),
+                sn: s.schoolName    || '',
+                ev: s.sessionName   || '',
+                p:  s.primaryColour   || '#1565C0',
+                sc: s.secondaryColour || '#FFFFFF',
+                st: s.startTime          || '',
+                iv: s.interviewDuration  || 0,
+                bk: s.breakDuration      || 0,
+                ni: s.numberOfInterviews || 0
+            };
+        } catch(e) { return null; }
+    }
+
+    // ── Timer helpers ─────────────────────────────────────────────────
+    function pad(n) { return String(Math.max(0, Math.floor(n))).padStart(2, '0'); }
+    function fmt(s) { s = Math.max(0, Math.round(s)); return `${pad(s/60)}:${pad(s%60)}`; }
+    function fmt12h(d) {
+        let h = d.getHours(), m = d.getMinutes();
+        return `${h%12||12}:${pad(m)} ${h>=12?'PM':'AM'}`;
+    }
+    function timeToDate(hhmm) {
+        if (!hhmm) return null;
+        const [h, m] = hhmm.split(':').map(Number);
+        const d = new Date(); d.setHours(h, m, 0, 0); return d;
+    }
+
+    function getTimerState(d) {
+        const now    = new Date();
+        const start  = timeToDate(d.st);
+        if (!start || !d.iv || !d.ni) return null;
+        const ivSecs  = d.iv * 60;
+        const bkSecs  = (d.bk || 0) * 60;
+        const cycle   = ivSecs + bkSecs;
+        const total   = d.ni;
+
+        if (now < start) return { phase: 'waiting', at: start };
+
+        const elapsed = (now - start) / 1000;
+        if (bkSecs === 0) {
+            const idx = Math.floor(elapsed / ivSecs);
+            if (idx >= total) return { phase: 'complete' };
+            return { phase: 'interview', left: ivSecs - (elapsed % ivSecs),
+                     next: new Date(start.getTime() + (idx+1)*ivSecs*1000) };
         }
-        function loadTeachers() {
-            try { return JSON.parse(localStorage.getItem('pti_teachers')) || []; } catch { return []; }
+        const ci  = Math.floor(elapsed / cycle);
+        const pos = elapsed % cycle;
+        if (ci >= total) return { phase: 'complete' };
+        const nextStart = new Date(start.getTime() + (ci+1)*cycle*1000);
+        if (pos < ivSecs) return { phase: 'interview', left: ivSecs - pos, next: nextStart };
+        if (ci + 1 >= total) return { phase: 'complete' };
+        return { phase: 'break', left: cycle - pos, next: nextStart };
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────
+    function esc(s) {
+        return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Tick ──────────────────────────────────────────────────────────
+    let timerData = null;
+
+    function tick() {
+        if (!timerData) return;
+        const state = getTimerState(timerData);
+        if (!state) return;
+
+        const inner  = document.getElementById('timerInner');
+        const label  = document.getElementById('timerLabel');
+        const next   = document.getElementById('timerNext');
+        const digits = document.getElementById('timerDigits');
+
+        inner.className = 'timer-banner-inner ' + state.phase;
+
+        if (state.phase === 'waiting') {
+            label.textContent  = 'Session begins at';
+            digits.textContent = fmt12h(state.at);
+            next.textContent   = '';
+        } else if (state.phase === 'complete') {
+            label.textContent  = 'Session Complete';
+            digits.textContent = '';
+            next.textContent   = 'Thank you for attending';
+        } else if (state.phase === 'interview') {
+            label.textContent  = 'Interview in Progress';
+            digits.textContent = fmt(state.left);
+            next.textContent   = state.next ? `Move to next room at ${fmt12h(state.next)}` : '';
+        } else {
+            label.textContent  = 'Break Time';
+            digits.textContent = fmt(state.left);
+            next.textContent   = state.next ? `Next interview at ${fmt12h(state.next)}` : '';
         }
-        function esc(s) {
-            return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────
+    function init() {
+        const d = getHashData() || fromStorage();
+        if (!d) return;
+
+        // Branding
+        if (d.p)  document.documentElement.style.setProperty('--primary',   d.p);
+        if (d.sc) document.documentElement.style.setProperty('--secondary',  d.sc);
+        if (d.sn) {
+            document.getElementById('hdrSchool').textContent = d.sn;
+            document.title = d.sn + ' — PTI Room Locations';
+        }
+        if (d.ev) document.getElementById('hdrEvent').textContent = d.ev;
+
+        // Date title
+        const today = new Date().toLocaleDateString('en-AU', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+        document.getElementById('pageTitle').textContent = `Teacher Locations — ${today}`;
+
+        // Timer
+        if (d.st && d.iv && d.ni) {
+            timerData = d;
+            document.getElementById('timerBanner').style.display = 'block';
+            tick();
+            setInterval(tick, 500);
         }
 
-        function init() {
-            const settings = loadSettings();
-            const teachers = loadTeachers();
+        // Teacher table
+        const container = document.getElementById('tableContainer');
+        const teachers  = (d.t || []).filter(t => t.n || t.s || t.r);
 
-            // Apply branding
-            if (settings.primaryColour)
-                document.documentElement.style.setProperty('--primary', settings.primaryColour);
-            if (settings.secondaryColour)
-                document.documentElement.style.setProperty('--secondary', settings.secondaryColour);
-
-            if (settings.schoolName) {
-                document.getElementById('hdrSchool').textContent = settings.schoolName;
-                document.title = settings.schoolName + ' — PTI Room Locations';
-            }
-            if (settings.logoDataUrl) {
-                const img = document.getElementById('hdrLogo');
-                img.src = settings.logoDataUrl;
-                img.style.display = 'block';
-            }
-
-            // Page title with today's date
-            const today = new Date().toLocaleDateString('en-AU', {
-                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-            });
-            document.getElementById('pageTitle').textContent = `Teacher Locations — ${today}`;
-
-            // Render table
-            const container = document.getElementById('tableContainer');
-            if (!teachers.length) {
-                container.innerHTML = '<div class="empty"><p>Room information has not been set up yet.</p></div>';
-                return;
-            }
-
-            const sorted = [...teachers]
-                .filter(t => t.name || t.subject || t.room)
-                .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-            const rows = sorted.map(t => `
-                <tr>
-                    <td>${esc(t.name)}</td>
-                    <td>${esc(t.subject)}</td>
-                    <td>${esc(t.room)}</td>
-                </tr>`).join('');
-
-            container.innerHTML = `
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Teacher</th>
-                                <th>Subject</th>
-                                <th>Room</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>`;
+        if (!teachers.length) {
+            container.innerHTML = '<div class="empty"><p>Room information has not been set up yet.</p></div>';
+            return;
         }
 
-        init();
+        const sorted = [...teachers].sort((a, b) => (a.n||'').localeCompare(b.n||''));
+        const rows   = sorted.map(t => `
+            <tr>
+                <td>${esc(t.n)}</td>
+                <td>${esc(t.s)}</td>
+                <td>${esc(t.r)}</td>
+            </tr>`).join('');
+
+        container.innerHTML = `
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Teacher</th><th>Subject</th><th>Room</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    init();
     </script>
 </body>
 </html>
