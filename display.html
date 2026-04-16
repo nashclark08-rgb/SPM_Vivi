@@ -435,7 +435,9 @@
         }
 
         tick();
-        setInterval(tick, 500);
+        // Align to the next whole-second boundary so this display and
+        // the rooms.html phone timer always show the same digit simultaneously
+        setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (Date.now() % 1000));
     }
 
     window.addEventListener('load', init);
