@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTI Room Locations</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary:   #1565C0;
+            --secondary: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #F5F5F5;
+            color: #212121;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ─────────────────────────── */
+        .hdr {
+            background: var(--primary);
+            color: var(--secondary);
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            flex-shrink: 0;
+        }
+        .hdr img {
+            height: 42px;
+            width: auto;
+            display: none;
+            border-radius: 3px;
+        }
+        .hdr-text h1 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        .hdr-text p {
+            font-size: 0.78rem;
+            opacity: 0.8;
+            margin-top: 0.15rem;
+        }
+
+        /* ── Content ────────────────────────── */
+        .content {
+            flex: 1;
+            padding: 1.1rem 1rem 2rem;
+            max-width: 720px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .page-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #616161;
+            margin-bottom: 0.9rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        /* ── Table ──────────────────────────── */
+        .table-wrap {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background: var(--primary);
+            color: var(--secondary);
+        }
+
+        thead th {
+            padding: 0.7rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #F0F0F0;
+        }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:nth-child(even) { background: #FAFAFA; }
+
+        tbody td {
+            padding: 0.8rem 1rem;
+            vertical-align: middle;
+        }
+
+        /* Teacher name bold */
+        tbody td:first-child { font-weight: 600; }
+
+        /* Room highlighted */
+        tbody td:last-child {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* ── Empty state ─────────────────────── */
+        .empty {
+            background: white;
+            border-radius: 8px;
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #9E9E9E;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        .empty p { font-size: 0.95rem; }
+
+        /* ── Footer ─────────────────────────── */
+        .ftr {
+            height: 6px;
+            background: var(--primary);
+            margin-top: auto;
+        }
+
+        /* ── Responsive ──────────────────────── */
+        @media (max-width: 420px) {
+            thead th, tbody td { padding: 0.65rem 0.75rem; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hdr">
+        <img id="hdrLogo" src="" alt="">
+        <div class="hdr-text">
+            <h1 id="hdrSchool">Parent Teacher Interviews</h1>
+            <p>Teacher Room Locations</p>
+        </div>
+    </header>
+
+    <div class="content">
+        <div class="page-title" id="pageTitle">Teacher Locations</div>
+        <div id="tableContainer"></div>
+    </div>
+
+    <footer class="ftr"></footer>
+
+    <script>
+        function loadSettings() {
+            try { return JSON.parse(localStorage.getItem('pti_settings')) || {}; } catch { return {}; }
+        }
+        function loadTeachers() {
+            try { return JSON.parse(localStorage.getItem('pti_teachers')) || []; } catch { return []; }
+        }
+        function esc(s) {
+            return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function init() {
+            const settings = loadSettings();
+            const teachers = loadTeachers();
+
+            // Apply branding
+            if (settings.primaryColour)
+                document.documentElement.style.setProperty('--primary', settings.primaryColour);
+            if (settings.secondaryColour)
+                document.documentElement.style.setProperty('--secondary', settings.secondaryColour);
+
+            if (settings.schoolName) {
+                document.getElementById('hdrSchool').textContent = settings.schoolName;
+                document.title = settings.schoolName + ' — PTI Room Locations';
+            }
+            if (settings.logoDataUrl) {
+                const img = document.getElementById('hdrLogo');
+                img.src = settings.logoDataUrl;
+                img.style.display = 'block';
+            }
+
+            // Page title with today's date
+            const today = new Date().toLocaleDateString('en-AU', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+            });
+            document.getElementById('pageTitle').textContent = `Teacher Locations — ${today}`;
+
+            // Render table
+            const container = document.getElementById('tableContainer');
+            if (!teachers.length) {
+                container.innerHTML = '<div class="empty"><p>Room information has not been set up yet.</p></div>';
+                return;
+            }
+
+            const sorted = [...teachers]
+                .filter(t => t.name || t.subject || t.room)
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+            const rows = sorted.map(t => `
+                <tr>
+                    <td>${esc(t.name)}</td>
+                    <td>${esc(t.subject)}</td>
+                    <td>${esc(t.room)}</td>
+                </tr>`).join('');
+
+            container.innerHTML = `
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Teacher</th>
+                                <th>Subject</th>
+                                <th>Room</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+        }
+
+        init();
+    </script>
+</body>
+</html>

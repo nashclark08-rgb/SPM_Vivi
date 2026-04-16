@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTI Admin Setup</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #1565C0;
+            --primary-dark: #0D47A1;
+            --text: #212121;
+            --text-muted: #757575;
+            --bg: #F5F7FA;
+            --card: #FFFFFF;
+            --border: #E0E0E0;
+            --danger: #C62828;
+            --success-bg: #E8F5E9;
+            --success-border: #2E7D32;
+            --success-text: #1B5E20;
+            --error-bg: #FFEBEE;
+            --error-border: #C62828;
+            --error-text: #B71C1C;
+            --radius: 8px;
+            --shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .page-header {
+            background: var(--primary);
+            color: white;
+            padding: 1.25rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-header-icon {
+            font-size: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .page-header p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 0.15rem;
+        }
+
+        main {
+            max-width: 880px;
+            margin: 2rem auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.65rem;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-desc {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 1.1rem;
+            line-height: 1.55;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        label {
+            font-size: 0.825rem;
+            font-weight: 500;
+            color: #424242;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="time"] {
+            padding: 0.55rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: var(--text);
+            background: white;
+            width: 100%;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(21,101,192,0.15);
+        }
+
+        input[type="file"] {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        input[type="color"] {
+            width: 46px;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 2px 3px;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .color-hex {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Branding preview */
+        .branding-preview {
+            margin-top: 1.4rem;
+        }
+
+        .preview-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.9rem 1.25rem;
+            border-radius: var(--radius);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .preview-bar img {
+            height: 36px;
+            width: auto;
+            display: none;
+        }
+
+        .preview-bar span {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Timing preview */
+        .timing-preview {
+            margin-top: 1rem;
+            padding: 0.7rem 1rem;
+            border-left: 4px solid var(--success-border);
+            border-radius: 0 6px 6px 0;
+            font-size: 0.875rem;
+            display: none;
+            line-height: 1.4;
+        }
+
+        .timing-preview.ok {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+            color: var(--success-text);
+        }
+
+        .timing-preview.error {
+            background: var(--error-bg);
+            border-color: var(--error-border);
+            color: var(--error-text);
+        }
+
+        /* Logo preview */
+        .logo-preview-wrap {
+            margin-top: 0.4rem;
+        }
+
+        .logo-preview-wrap img {
+            max-height: 56px;
+            max-width: 180px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px;
+            background: white;
+        }
+
+        /* Teacher table */
+        .table-wrap {
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        thead th {
+            background: var(--bg);
+            padding: 0.55rem 0.75rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: #FAFAFA; }
+
+        tbody td {
+            padding: 0.4rem 0.5rem;
+        }
+
+        tbody td input[type="text"] {
+            border-color: transparent;
+            background: transparent;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        tbody td input[type="text"]:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .btn-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #BDBDBD;
+            font-size: 1rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            line-height: 1;
+            transition: color 0.15s, background 0.15s;
+        }
+
+        .btn-remove:hover {
+            color: var(--danger);
+            background: var(--error-bg);
+        }
+
+        .empty-msg {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-style: italic;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 1.1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn:active { transform: translateY(1px); }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        .btn-secondary:hover { background: #E3F2FD; }
+
+        .btn-danger {
+            background: white;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        .btn-danger:hover { background: var(--error-bg); }
+
+        .actions-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .actions-bar .spacer { flex: 1; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #323232;
+            color: white;
+            padding: 0.7rem 1.2rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+            z-index: 9999;
+            max-width: 320px;
+        }
+
+        .toast.visible { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<header class="page-header">
+    <div class="page-header-icon">&#9881;</div>
+    <div>
+        <h1>PTI Admin Setup</h1>
+        <p>Configure your Parent Teacher Interview session</p>
+    </div>
+</header>
+
+<main>
+
+    <!-- BRANDING -->
+    <section class="card">
+        <h2>&#127968; School Branding</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="schoolName">School Name</label>
+                <input type="text" id="schoolName" placeholder="e.g. Riverside High School">
+            </div>
+            <div class="form-group">
+                <label for="schoolLogo">School Logo</label>
+                <input type="file" id="schoolLogo" accept="image/*">
+                <div class="logo-preview-wrap" id="logoPreviewWrap"></div>
+            </div>
+            <div class="form-group">
+                <label for="primaryColour">Primary Colour</label>
+                <div class="color-row">
+                    <input type="color" id="primaryColour" value="#1565C0">
+                    <span class="color-hex" id="primaryHex">#1565C0</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="secondaryColour">Text / Secondary Colour</label>
+                <div class="color-row">
+                    <input type="color" id="secondaryColour" value="#FFFFFF">
+                    <span class="color-hex" id="secondaryHex">#FFFFFF</span>
+                </div>
+            </div>
+        </div>
+        <div class="branding-preview">
+            <p class="preview-label">Preview</p>
+            <div class="preview-bar" id="previewBar" style="background:#1565C0; color:#FFFFFF;">
+                <img id="previewLogo" src="" alt="">
+                <span id="previewName">Your School Name</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- TIMING -->
+    <section class="card">
+        <h2>&#128336; Session Timing</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="startTime">Session Start Time</label>
+                <input type="time" id="startTime">
+            </div>
+            <div class="form-group">
+                <label for="finishTime">Session Finish Time</label>
+                <input type="time" id="finishTime">
+            </div>
+            <div class="form-group">
+                <label for="interviewDuration">Interview Duration (minutes)</label>
+                <input type="number" id="interviewDuration" min="1" max="60" placeholder="e.g. 10">
+            </div>
+            <div class="form-group">
+                <label for="breakDuration">Break Between Interviews (minutes)</label>
+                <input type="number" id="breakDuration" min="0" max="30" placeholder="e.g. 2" value="0">
+            </div>
+        </div>
+        <div class="timing-preview" id="timingPreview"></div>
+    </section>
+
+    <!-- TEACHER DIRECTORY -->
+    <section class="card">
+        <h2>&#128203; Teacher &amp; Room Directory</h2>
+        <p class="section-desc">
+            Enter staff details so parents and teachers can locate their interview room.
+            This information is accessible by scanning the QR code on the display screen.
+        </p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Teacher Name</th>
+                        <th>Subject</th>
+                        <th>Room</th>
+                        <th style="width:44px"></th>
+                    </tr>
+                </thead>
+                <tbody id="teacherBody">
+                    <tr><td colspan="4" class="empty-msg">No teachers added yet — click "+ Add Teacher" below.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-secondary" onclick="addRow()">+ Add Teacher</button>
+    </section>
+
+    <!-- ACTIONS -->
+    <div class="actions-bar">
+        <button class="btn btn-primary" onclick="saveAndLaunch()">&#9654; Save &amp; Launch Display</button>
+        <button class="btn btn-secondary" onclick="previewRooms()">&#128269; Preview Room Overview</button>
+        <div class="spacer"></div>
+        <button class="btn btn-danger" onclick="resetAll()">&#8635; Reset All</button>
+    </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    const KEYS = { settings: 'pti_settings', teachers: 'pti_teachers' };
+
+    // ── Storage helpers ──────────────────────────────────────────────
+    function loadSettings() {
+        try { return JSON.parse(localStorage.getItem(KEYS.settings)) || {}; } catch { return {}; }
+    }
+    function loadTeachers() {
+        try { return JSON.parse(localStorage.getItem(KEYS.teachers)) || []; } catch { return []; }
+    }
+    function persist() {
+        localStorage.setItem(KEYS.settings, JSON.stringify(collectSettings()));
+        localStorage.setItem(KEYS.teachers, JSON.stringify(teacherRows));
+    }
+
+    // ── Time helpers ─────────────────────────────────────────────────
+    function toMins(t) {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    }
+    function minsTo12h(mins) {
+        const h = Math.floor(mins / 60) % 24;
+        const m = mins % 60;
+        const p = h >= 12 ? 'PM' : 'AM';
+        return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${p}`;
+    }
+    function calcN(start, finish, iv, brk) {
+        const total = toMins(finish) - toMins(start);
+        const cycle = iv + brk;
+        if (total <= 0 || cycle <= 0) return 0;
+        return Math.floor((total + brk) / cycle);
+    }
+
+    // ── Timing preview ───────────────────────────────────────────────
+    function updateTimingPreview() {
+        const start  = document.getElementById('startTime').value;
+        const finish = document.getElementById('finishTime').value;
+        const iv     = parseInt(document.getElementById('interviewDuration').value) || 0;
+        const brk    = parseInt(document.getElementById('breakDuration').value) || 0;
+        const el     = document.getElementById('timingPreview');
+
+        if (!start || !finish || !iv) { el.style.display = 'none'; return; }
+
+        const totalMins = toMins(finish) - toMins(start);
+        if (totalMins <= 0) {
+            el.textContent = 'Finish time must be after start time.';
+            el.style.display = 'block'; el.className = 'timing-preview error'; return;
+        }
+        const n = calcN(start, finish, iv, brk);
+        if (n < 1) {
+            el.textContent = 'Interview duration is longer than the session window.';
+            el.style.display = 'block'; el.className = 'timing-preview error'; return;
+        }
+        const usedMins = n * iv + (n > 1 ? (n - 1) * brk : 0);
+        const endMins  = toMins(start) + usedMins;
+        const unused   = toMins(finish) - endMins;
+        let msg = `${n} interview${n !== 1 ? 's' : ''} will be scheduled, finishing at ${minsTo12h(endMins)}.`;
+        if (unused > 0) msg += ` (${unused} minute${unused !== 1 ? 's' : ''} unused at end of session)`;
+        el.textContent = msg;
+        el.style.display = 'block'; el.className = 'timing-preview ok';
+    }
+
+    // ── Branding preview ─────────────────────────────────────────────
+    function updateBrandingPreview() {
+        const name    = document.getElementById('schoolName').value || 'Your School Name';
+        const primary = document.getElementById('primaryColour').value;
+        const sec     = document.getElementById('secondaryColour').value;
+        document.getElementById('previewName').textContent = name;
+        document.getElementById('previewBar').style.background = primary;
+        document.getElementById('previewBar').style.color = sec;
+        document.getElementById('primaryHex').textContent = primary;
+        document.getElementById('secondaryHex').textContent = sec;
+    }
+
+    // ── Teacher table ────────────────────────────────────────────────
+    let teacherRows = [];
+
+    function renderTable() {
+        const tbody = document.getElementById('teacherBody');
+        if (!teacherRows.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">No teachers added yet — click "+ Add Teacher" below.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        teacherRows.forEach((row, i) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" value="${esc(row.name)}" placeholder="Mr Nash Clark" oninput="teacherRows[${i}].name=this.value"></td>
+                <td><input type="text" value="${esc(row.subject)}" placeholder="Mathematics" oninput="teacherRows[${i}].subject=this.value"></td>
+                <td><input type="text" value="${esc(row.room)}" placeholder="Senior South 1.4" oninput="teacherRows[${i}].room=this.value"></td>
+                <td><button class="btn-remove" onclick="removeRow(${i})" title="Remove">&#10005;</button></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function esc(s) {
+        return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function addRow() {
+        teacherRows.push({ name: '', subject: '', room: '' });
+        renderTable();
+        const inputs = document.querySelectorAll('#teacherBody tr:last-child input');
+        if (inputs.length) inputs[0].focus();
+    }
+
+    function removeRow(i) {
+        teacherRows.splice(i, 1);
+        renderTable();
+    }
+
+    // ── Logo ─────────────────────────────────────────────────────────
+    let logoDataUrl = '';
+
+    document.getElementById('schoolLogo').addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            logoDataUrl = e.target.result;
+            showLogoPreview(logoDataUrl);
+            const pLogo = document.getElementById('previewLogo');
+            pLogo.src = logoDataUrl;
+            pLogo.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function showLogoPreview(src) {
+        document.getElementById('logoPreviewWrap').innerHTML =
+            `<img src="${src}" alt="Logo preview">`;
+    }
+
+    // ── Collect & validate ───────────────────────────────────────────
+    function collectSettings() {
+        const start  = document.getElementById('startTime').value;
+        const finish = document.getElementById('finishTime').value;
+        const iv     = parseInt(document.getElementById('interviewDuration').value) || 0;
+        const brk    = parseInt(document.getElementById('breakDuration').value) || 0;
+        return {
+            schoolName: document.getElementById('schoolName').value.trim(),
+            logoDataUrl,
+            primaryColour:   document.getElementById('primaryColour').value,
+            secondaryColour: document.getElementById('secondaryColour').value,
+            startTime:  start,
+            finishTime: finish,
+            interviewDuration: iv,
+            breakDuration: brk,
+            numberOfInterviews: (start && finish && iv) ? calcN(start, finish, iv, brk) : 0
+        };
+    }
+
+    function validate() {
+        const s = collectSettings();
+        if (!s.startTime || !s.finishTime) { toast('Please set start and finish times.'); return false; }
+        if (!s.interviewDuration)           { toast('Please set an interview duration.'); return false; }
+        if (s.numberOfInterviews < 1)       { toast('Timing values result in 0 interviews — please check.'); return false; }
+        return true;
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────
+    function saveAndLaunch() {
+        if (!validate()) return;
+        persist();
+        window.open('display.html', '_blank');
+    }
+
+    function previewRooms() {
+        persist();
+        window.open('rooms.html', '_blank');
+    }
+
+    function resetAll() {
+        if (!confirm('Reset all settings? This cannot be undone.')) return;
+        localStorage.removeItem(KEYS.settings);
+        localStorage.removeItem(KEYS.teachers);
+        location.reload();
+    }
+
+    // ── Toast ────────────────────────────────────────────────────────
+    let toastTimer;
+    function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 3500);
+    }
+
+    // ── Initialise ───────────────────────────────────────────────────
+    function init() {
+        const s = loadSettings();
+        if (s.schoolName)         document.getElementById('schoolName').value = s.schoolName;
+        if (s.primaryColour)      document.getElementById('primaryColour').value = s.primaryColour;
+        if (s.secondaryColour)    document.getElementById('secondaryColour').value = s.secondaryColour;
+        if (s.startTime)          document.getElementById('startTime').value = s.startTime;
+        if (s.finishTime)         document.getElementById('finishTime').value = s.finishTime;
+        if (s.interviewDuration)  document.getElementById('interviewDuration').value = s.interviewDuration;
+        if (s.breakDuration !== undefined) document.getElementById('breakDuration').value = s.breakDuration;
+        if (s.logoDataUrl) {
+            logoDataUrl = s.logoDataUrl;
+            showLogoPreview(logoDataUrl);
+            const pLogo = document.getElementById('previewLogo');
+            pLogo.src = logoDataUrl;
+            pLogo.style.display = 'block';
+        }
+        teacherRows = loadTeachers();
+        renderTable();
+        updateBrandingPreview();
+        updateTimingPreview();
+    }
+
+    // Event listeners
+    document.getElementById('schoolName').addEventListener('input', updateBrandingPreview);
+    document.getElementById('primaryColour').addEventListener('input', updateBrandingPreview);
+    document.getElementById('secondaryColour').addEventListener('input', updateBrandingPreview);
+    ['startTime','finishTime','interviewDuration','breakDuration'].forEach(id =>
+        document.getElementById(id).addEventListener('input', updateTimingPreview));
+
+    init();
+</script>
+</body>
+</html>

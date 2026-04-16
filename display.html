@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTI Display</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary:    #1565C0;
+            --secondary:  #FFFFFF;
+            --break-bg:   #E65100;
+            --waiting-bg: #37474F;
+            --done-bg:    #2E7D32;
+        }
+
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            background: var(--waiting-bg);
+            color: var(--secondary);
+            transition: background 0.6s ease;
+        }
+
+        /* ── Header ─────────────────────────────────── */
+        .hdr {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1.75rem;
+            background: rgba(0,0,0,0.18);
+            flex-shrink: 0;
+        }
+        .hdr img { height: 46px; width: auto; display: none; }
+        .hdr .school { font-size: clamp(1rem, 2.2vw, 1.6rem); font-weight: 600; opacity: 0.95; }
+
+        /* ── Main area ───────────────────────────────── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 2rem;
+            position: relative;
+        }
+
+        /* Active timer */
+        #timerView { display: none; text-align: center; }
+
+        .status-label {
+            font-size: clamp(1.4rem, 3.8vw, 3.2rem);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.88;
+            margin-bottom: 0.3rem;
+        }
+
+        .timer {
+            font-size: clamp(6rem, 21vw, 21rem);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            text-shadow: 0 6px 30px rgba(0,0,0,0.25);
+        }
+
+        .sub {
+            margin-top: 1.4rem;
+            opacity: 0.82;
+            text-align: center;
+        }
+        .next-time {
+            font-size: clamp(0.9rem, 2.2vw, 1.6rem);
+            margin-bottom: 0.3rem;
+        }
+        .progress {
+            font-size: clamp(0.8rem, 1.6vw, 1.2rem);
+            opacity: 0.75;
+        }
+
+        /* Waiting view */
+        #waitingView { display: none; text-align: center; }
+        .waiting-label {
+            font-size: clamp(1.2rem, 3vw, 2.5rem);
+            font-weight: 600;
+            opacity: 0.85;
+            margin-bottom: 0.5rem;
+        }
+        .waiting-time {
+            font-size: clamp(3rem, 12vw, 10rem);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+
+        /* Complete view */
+        #completeView { display: none; text-align: center; }
+        .complete-title {
+            font-size: clamp(3rem, 9vw, 8rem);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .complete-sub {
+            margin-top: 1rem;
+            font-size: clamp(1rem, 2.8vw, 2.2rem);
+            opacity: 0.82;
+        }
+
+        /* QR Code */
+        .qr-wrap {
+            position: absolute;
+            bottom: 1.4rem;
+            right: 1.6rem;
+            text-align: center;
+        }
+        #qrcode {
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            display: inline-block;
+            line-height: 0;
+        }
+        .qr-label {
+            font-size: clamp(0.6rem, 1vw, 0.8rem);
+            opacity: 0.75;
+            margin-top: 0.35rem;
+        }
+
+        /* ── Footer bar ──────────────────────────────── */
+        .ftr { height: 7px; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+
+        /* State backgrounds */
+        body.s-interview { background: var(--primary); }
+        body.s-break      { background: var(--break-bg); }
+        body.s-waiting    { background: var(--waiting-bg); }
+        body.s-complete   { background: var(--done-bg); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="s-waiting">
+
+    <!-- Header -->
+    <header class="hdr">
+        <img id="hdrLogo" src="" alt="">
+        <span class="school" id="hdrSchool">Parent Teacher Interviews</span>
+    </header>
+
+    <!-- Main -->
+    <main class="main">
+
+        <!-- Timer view -->
+        <div id="timerView">
+            <div class="status-label" id="statusLabel">Loading…</div>
+            <div class="timer" id="timerDigits">--:--</div>
+            <div class="sub">
+                <div class="next-time"  id="nextTime"></div>
+                <div class="progress"   id="progressTxt"></div>
+            </div>
+        </div>
+
+        <!-- Waiting view -->
+        <div id="waitingView">
+            <div class="waiting-label">Session begins at</div>
+            <div class="waiting-time" id="waitingTime">--:--</div>
+        </div>
+
+        <!-- Complete view -->
+        <div id="completeView">
+            <div class="complete-title">Session Complete</div>
+            <div class="complete-sub">Thank you for attending.</div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="qr-wrap" id="qrWrap">
+            <div id="qrcode"></div>
+            <div class="qr-label">Scan for teacher locations</div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="ftr"></footer>
+
+    <!-- QR Code library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+            onerror="document.getElementById('qrWrap').style.display='none'"></script>
+
+    <script>
+    // ── Storage ───────────────────────────────────────────────────────
+    function loadSettings() {
+        try { return JSON.parse(localStorage.getItem('pti_settings')) || {}; } catch { return {}; }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    function pad(n) { return String(Math.max(0, Math.floor(n))).padStart(2, '0'); }
+
+    function fmtCountdown(secs) {
+        const s = Math.max(0, Math.round(secs));
+        return `${pad(s / 60)}:${pad(s % 60)}`;
+    }
+
+    function timeStrToDate(hhmm) {
+        const [h, m] = hhmm.split(':').map(Number);
+        const d = new Date();
+        d.setHours(h, m, 0, 0);
+        return d;
+    }
+
+    function fmt12h(date) {
+        let h = date.getHours(), m = date.getMinutes();
+        const p = h >= 12 ? 'PM' : 'AM';
+        return `${h % 12 || 12}:${pad(m)} ${p}`;
+    }
+
+    // ── Audio ─────────────────────────────────────────────────────────
+    // Descending three-note chime — end of interview
+    function playEndOfInterview() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [[880, 0], [660, 0.42], [440, 0.84]].forEach(([freq, t]) => {
+                const osc = ctx.createOscillator();
+                const g   = ctx.createGain();
+                osc.connect(g); g.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                g.gain.setValueAtTime(0.55, ctx.currentTime + t);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.65);
+                osc.start(ctx.currentTime + t);
+                osc.stop(ctx.currentTime + t + 0.68);
+            });
+        } catch (e) { console.warn('Audio:', e); }
+    }
+
+    // Ascending double-beep — next interview starting
+    function playEndOfBreak() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [[440, 0], [660, 0.18], [440, 0.55], [880, 0.73]].forEach(([freq, t]) => {
+                const osc = ctx.createOscillator();
+                const g   = ctx.createGain();
+                osc.connect(g); g.connect(ctx.destination);
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                g.gain.setValueAtTime(0.18, ctx.currentTime + t);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14);
+                osc.start(ctx.currentTime + t);
+                osc.stop(ctx.currentTime + t + 0.16);
+            });
+        } catch (e) { console.warn('Audio:', e); }
+    }
+
+    // ── State calculation ─────────────────────────────────────────────
+    function getState(cfg) {
+        const now        = new Date();
+        const start      = timeStrToDate(cfg.startTime);
+        const ivSecs     = cfg.interviewDuration * 60;
+        const brkSecs    = (cfg.breakDuration || 0) * 60;
+        const cycleSecs  = ivSecs + brkSecs;
+        const total      = cfg.numberOfInterviews || 0;
+
+        if (now < start) {
+            return { phase: 'waiting', startTime: start };
+        }
+
+        const elapsed = (now - start) / 1000;
+
+        // No-break case
+        if (brkSecs === 0) {
+            const idx = Math.floor(elapsed / ivSecs);
+            if (idx >= total) return { phase: 'complete', total };
+            const tLeft = ivSecs - (elapsed % ivSecs);
+            const nextStart = new Date(start.getTime() + (idx + 1) * ivSecs * 1000);
+            return { phase: 'interview', timeLeft: tLeft, interviewNumber: idx + 1, total, nextInterviewTime: nextStart };
+        }
+
+        const cycleIdx  = Math.floor(elapsed / cycleSecs);
+        const posInCycle = elapsed % cycleSecs;
+
+        if (cycleIdx >= total) return { phase: 'complete', total };
+
+        const ivNum      = cycleIdx + 1;
+        const nextStart  = new Date(start.getTime() + (cycleIdx + 1) * cycleSecs * 1000);
+
+        if (posInCycle < ivSecs) {
+            return { phase: 'interview', timeLeft: ivSecs - posInCycle, interviewNumber: ivNum, total, nextInterviewTime: nextStart };
+        }
+
+        // Break — if last interview just ended, show complete
+        if (ivNum >= total) return { phase: 'complete', total };
+
+        return { phase: 'break', timeLeft: cycleSecs - posInCycle, interviewNumber: ivNum, total, nextInterviewTime: nextStart };
+    }
+
+    // ── Render ────────────────────────────────────────────────────────
+    let prevPhase = null;
+    let cfg       = {};
+
+    const views = {
+        timer:    document.getElementById('timerView'),
+        waiting:  document.getElementById('waitingView'),
+        complete: document.getElementById('completeView'),
+    };
+
+    function showOnly(key) {
+        Object.entries(views).forEach(([k, el]) => el.style.display = (k === key) ? 'block' : 'none');
+    }
+
+    function tick() {
+        const state = getState(cfg);
+
+        // Sound cues on phase transition
+        if (prevPhase !== null && prevPhase !== state.phase) {
+            if (state.phase === 'break')    playEndOfInterview();
+            if (state.phase === 'interview' && prevPhase === 'break') playEndOfBreak();
+            if (state.phase === 'complete'  && prevPhase === 'interview') playEndOfInterview();
+        }
+        prevPhase = state.phase;
+
+        // Body state class
+        document.body.className = `s-${state.phase}`;
+
+        if (state.phase === 'waiting') {
+            showOnly('waiting');
+            document.getElementById('waitingTime').textContent = fmt12h(state.startTime);
+
+        } else if (state.phase === 'complete') {
+            showOnly('complete');
+
+        } else {
+            showOnly('timer');
+            const isInterview = state.phase === 'interview';
+            document.getElementById('statusLabel').textContent = isInterview ? 'Interview in Progress' : 'Break Time';
+            document.getElementById('timerDigits').textContent = fmtCountdown(state.timeLeft);
+
+            if (isInterview && state.interviewNumber < state.total) {
+                document.getElementById('nextTime').textContent = `Next interview at ${fmt12h(state.nextInterviewTime)}`;
+            } else if (!isInterview) {
+                document.getElementById('nextTime').textContent = `Next interview at ${fmt12h(state.nextInterviewTime)}`;
+            } else {
+                document.getElementById('nextTime').textContent = 'Final interview';
+            }
+
+            document.getElementById('progressTxt').textContent =
+                isInterview
+                    ? `Interview ${state.interviewNumber} of ${state.total}`
+                    : `Interview ${state.interviewNumber} of ${state.total} complete`;
+        }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────
+    function init() {
+        cfg = loadSettings();
+
+        // Apply branding
+        if (cfg.primaryColour)   document.documentElement.style.setProperty('--primary', cfg.primaryColour);
+        if (cfg.secondaryColour) {
+            document.documentElement.style.setProperty('--secondary', cfg.secondaryColour);
+            document.body.style.color = cfg.secondaryColour;
+        }
+        if (cfg.schoolName) document.getElementById('hdrSchool').textContent = cfg.schoolName;
+        if (cfg.logoDataUrl) {
+            const img = document.getElementById('hdrLogo');
+            img.src = cfg.logoDataUrl;
+            img.style.display = 'block';
+        }
+
+        // QR code pointing at rooms.html
+        const base     = window.location.href.replace(/[^/]*$/, '');
+        const roomsUrl = base + 'rooms.html';
+        try {
+            new QRCode(document.getElementById('qrcode'), {
+                text: roomsUrl,
+                width: 148,
+                height: 148,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            document.getElementById('qrWrap').style.display = 'none';
+        }
+
+        tick();
+        setInterval(tick, 500);
+    }
+
+    window.addEventListener('load', init);
+    </script>
+</body>
+</html>
