@@ -10,7 +10,6 @@
         :root {
             --primary:    #1565C0;
             --secondary:  #FFFFFF;
-            --break-bg:   #E65100;
             --waiting-bg: #37474F;
             --done-bg:    #2E7D32;
         }
@@ -52,8 +51,23 @@
             position: relative;
         }
 
+        /* Watermark logo */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(58vw, 58vh);
+            height: min(58vw, 58vh);
+            object-fit: contain;
+            opacity: 0.07;
+            pointer-events: none;
+            user-select: none;
+            display: none;
+        }
+
         /* Active timer */
-        #timerView { display: none; text-align: center; }
+        #timerView { display: none; text-align: center; position: relative; z-index: 1; }
 
         .status-label {
             font-size: clamp(1.4rem, 3.8vw, 3.2rem);
@@ -138,11 +152,9 @@
         /* ── Footer bar ──────────────────────────────── */
         .ftr { height: 7px; background: rgba(0,0,0,0.2); flex-shrink: 0; }
 
-        /* State backgrounds */
-        body.s-interview { background: var(--primary); }
-        body.s-break      { background: var(--break-bg); }
-        body.s-waiting    { background: var(--waiting-bg); }
-        body.s-complete   { background: var(--done-bg); }
+        /* State backgrounds — interview/break set dynamically via JS; waiting/complete use these */
+        body.s-waiting  { background: var(--waiting-bg); color: #FFFFFF; }
+        body.s-complete { background: var(--done-bg);    color: #FFFFFF; }
 
         .hidden { display: none !important; }
     </style>
@@ -157,6 +169,9 @@
 
     <!-- Main -->
     <main class="main">
+
+        <!-- Watermark logo (shown during interview & break) -->
+        <img id="watermark" class="watermark" src="" alt="">
 
         <!-- Timer view -->
         <div id="timerView">
@@ -326,8 +341,22 @@
         }
         prevPhase = state.phase;
 
-        // Body state class
+        // Body state class + dynamic colours
         document.body.className = `s-${state.phase}`;
+        const wm = document.getElementById('watermark');
+        if (state.phase === 'interview') {
+            document.body.style.background = cfg.primaryColour  || '#1565C0';
+            document.body.style.color      = cfg.secondaryColour || '#FFFFFF';
+            wm.style.display = 'block';
+        } else if (state.phase === 'break') {
+            document.body.style.background = cfg.secondaryColour || '#FFFFFF';
+            document.body.style.color      = cfg.primaryColour   || '#1565C0';
+            wm.style.display = 'block';
+        } else {
+            document.body.style.background = '';
+            document.body.style.color      = '';
+            wm.style.display = 'none';
+        }
 
         if (state.phase === 'waiting') {
             showOnly('waiting');
@@ -372,6 +401,7 @@
             const img = document.getElementById('hdrLogo');
             img.src = cfg.logoDataUrl;
             img.style.display = 'block';
+            document.getElementById('watermark').src = cfg.logoDataUrl;
         }
 
         // QR code pointing at rooms.html
