@@ -55,14 +55,22 @@ The admin visits this page before the event to configure the session.
 
 | Field | Type | Description |
 |---|---|---|
-| Session Start Time | Time picker | The time of the very first interview |
+| Session Start Time | Time picker | The time the first interview begins |
+| Session Finish Time | Time picker | The time the last interview must end by |
 | Interview Duration | Number (minutes) | Length of each interview slot |
 | Break Duration | Number (minutes) | Length of each break between interviews |
-| Number of Interviews | Number | Total interviews in the session (used for progress tracking) |
+
+The total number of interviews is **calculated automatically** from these four values:
+
+```
+number_of_interviews = floor((finish_time - start_time) / (interview_duration + break_duration))
+```
+
+The admin page displays a live preview of the calculated interview count as values are entered, e.g. `"14 interviews will be scheduled (session ends at 4:10 PM)"`. If the session window does not divide evenly, the remaining time is noted, e.g. `"5 minutes unused at end of session"`.
 
 #### 3.1.3 Teacher & Room Directory
 
-Admin enters one row per teacher. Each row contains:
+Admin enters one row per teacher as part of pre-event setup, at the same time as timing and branding are configured. Each row contains:
 
 | Field | Type | Description |
 |---|---|---|
@@ -70,9 +78,9 @@ Admin enters one row per teacher. Each row contains:
 | Subject | Text | e.g. Mathematics |
 | Room | Text | e.g. Senior South 1.4 |
 
-- Rows can be added, edited, and removed
+- Rows can be added, edited, and removed at any time before or during the event
 - No minimum or maximum number of teachers enforced
-- The completed directory populates the Room Overview page (see Section 3.3) and is linked via QR code on the display screen
+- Once saved, the directory is immediately accessible to parents and teachers by scanning the QR code on the display screen, which opens the Room Overview page (`/rooms`) on their mobile device
 
 #### 3.1.4 Actions
 
