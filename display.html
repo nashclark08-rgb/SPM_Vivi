@@ -38,7 +38,9 @@
             flex-shrink: 0;
         }
         .hdr img { height: 46px; width: auto; display: none; }
-        .hdr .school { font-size: clamp(1rem, 2.2vw, 1.6rem); font-weight: 600; opacity: 0.95; }
+        .hdr-text { display: flex; flex-direction: column; gap: 0.05rem; }
+        .hdr .school { font-size: clamp(1rem, 2.2vw, 1.6rem); font-weight: 600; opacity: 0.95; line-height: 1.2; }
+        .hdr .session-name { font-size: clamp(0.7rem, 1.4vw, 1rem); font-weight: 400; opacity: 0.78; line-height: 1.2; }
 
         /* ── Main area ───────────────────────────────── */
         .main {
@@ -85,6 +87,8 @@
             line-height: 1;
             letter-spacing: -0.02em;
             text-shadow: 0 6px 30px rgba(0,0,0,0.25);
+            -webkit-text-stroke: 2px rgba(255,255,255,0.55);
+            paint-order: stroke fill;
         }
 
         .sub {
@@ -94,11 +98,6 @@
         }
         .next-time {
             font-size: clamp(0.9rem, 2.2vw, 1.6rem);
-            margin-bottom: 0.3rem;
-        }
-        .progress {
-            font-size: clamp(0.8rem, 1.6vw, 1.2rem);
-            opacity: 0.75;
         }
 
         /* Waiting view */
@@ -164,7 +163,10 @@
     <!-- Header -->
     <header class="hdr">
         <img id="hdrLogo" src="" alt="">
-        <span class="school" id="hdrSchool">Parent Teacher Interviews</span>
+        <div class="hdr-text">
+            <span class="school" id="hdrSchool">Parent Teacher Interviews</span>
+            <span class="session-name" id="hdrSession"></span>
+        </div>
     </header>
 
     <!-- Main -->
@@ -178,8 +180,7 @@
             <div class="status-label" id="statusLabel">Loading…</div>
             <div class="timer" id="timerDigits">--:--</div>
             <div class="sub">
-                <div class="next-time"  id="nextTime"></div>
-                <div class="progress"   id="progressTxt"></div>
+                <div class="next-time" id="nextTime"></div>
             </div>
         </div>
 
@@ -371,18 +372,13 @@
             document.getElementById('statusLabel').textContent = isInterview ? 'Interview in Progress' : 'Break Time';
             document.getElementById('timerDigits').textContent = fmtCountdown(state.timeLeft);
 
-            if (isInterview && state.interviewNumber < state.total) {
+            if (!isInterview) {
                 document.getElementById('nextTime').textContent = `Next interview at ${fmt12h(state.nextInterviewTime)}`;
-            } else if (!isInterview) {
+            } else if (state.interviewNumber < state.total) {
                 document.getElementById('nextTime').textContent = `Next interview at ${fmt12h(state.nextInterviewTime)}`;
             } else {
                 document.getElementById('nextTime').textContent = 'Final interview';
             }
-
-            document.getElementById('progressTxt').textContent =
-                isInterview
-                    ? `Interview ${state.interviewNumber} of ${state.total}`
-                    : `Interview ${state.interviewNumber} of ${state.total} complete`;
         }
     }
 
@@ -397,6 +393,7 @@
             document.body.style.color = cfg.secondaryColour;
         }
         if (cfg.schoolName) document.getElementById('hdrSchool').textContent = cfg.schoolName;
+        if (cfg.sessionName) document.getElementById('hdrSession').textContent = cfg.sessionName;
         if (cfg.logoDataUrl) {
             const img = document.getElementById('hdrLogo');
             img.src = cfg.logoDataUrl;
