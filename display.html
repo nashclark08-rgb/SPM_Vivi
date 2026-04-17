@@ -223,40 +223,42 @@
     }
 
     // ── Audio ─────────────────────────────────────────────────────────
-    // Descending three-note chime — end of interview
-    function playEndOfInterview() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            [[880, 0], [660, 0.42], [440, 0.84]].forEach(([freq, t]) => {
-                const osc = ctx.createOscillator();
-                const g   = ctx.createGain();
-                osc.connect(g); g.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                g.gain.setValueAtTime(0.55, ctx.currentTime + t);
-                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.65);
-                osc.start(ctx.currentTime + t);
-                osc.stop(ctx.currentTime + t + 0.68);
-            });
-        } catch (e) { console.warn('Audio:', e); }
+    function _tone(ctx, type, freq, gain, start, stop) {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.type = type; osc.frequency.value = freq;
+        const t0 = ctx.currentTime;
+        g.gain.setValueAtTime(gain, t0 + start);
+        g.gain.exponentialRampToValueAtTime(0.001, t0 + stop);
+        osc.start(t0 + start); osc.stop(t0 + stop + 0.05);
     }
-
-    // Ascending double-beep — next interview starting
+    const SOUND_DEFS = {
+        'Descending Chime': c => { [[880,0],[660,0.42],[440,0.84]].forEach(([f,t])=>_tone(c,'sine',f,0.55,t,t+0.65)); },
+        'Ascending Beep':   c => { [[440,0],[660,0.18],[440,0.55],[880,0.73]].forEach(([f,t])=>_tone(c,'square',f,0.18,t,t+0.14)); },
+        'Single Bell':      c => { _tone(c,'sine',880,0.6,0,1.2); },
+        'School Bell':      c => { for(let i=0;i<8;i++) _tone(c,'square',700,0.18,i*0.11,i*0.11+0.07); },
+        'Soft Ding':        c => { _tone(c,'sine',1047,0.35,0,0.9); },
+        'Double Tone':      c => { _tone(c,'sine',660,0.45,0,0.3); _tone(c,'sine',880,0.45,0.38,0.68); },
+        'Alert Buzz':       c => { _tone(c,'square',200,0.3,0,0.5); },
+        'Xylophone Hit':    c => { _tone(c,'triangle',1175,0.7,0,0.38); },
+        'Low Gong':         c => { _tone(c,'sine',110,0.6,0,1.5); _tone(c,'sine',220,0.25,0,0.8); },
+        'High Ping':        c => { _tone(c,'sine',2093,0.45,0,0.2); }
+    };
+    function _loadSounds() {
+        try { return JSON.parse(localStorage.getItem('pti_sounds')) || {}; } catch { return {}; }
+    }
+    function _playSound(name) {
+        const fn = SOUND_DEFS[name] || SOUND_DEFS['Descending Chime'];
+        try { const ctx = new (window.AudioContext||window.webkitAudioContext)(); fn(ctx); }
+        catch(e) { console.warn('Audio:', e); }
+    }
+    function playEndOfInterview() {
+        const s = _loadSounds();
+        _playSound(s.endInterview || 'Descending Chime');
+    }
     function playEndOfBreak() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            [[440, 0], [660, 0.18], [440, 0.55], [880, 0.73]].forEach(([freq, t]) => {
-                const osc = ctx.createOscillator();
-                const g   = ctx.createGain();
-                osc.connect(g); g.connect(ctx.destination);
-                osc.type = 'square';
-                osc.frequency.value = freq;
-                g.gain.setValueAtTime(0.18, ctx.currentTime + t);
-                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14);
-                osc.start(ctx.currentTime + t);
-                osc.stop(ctx.currentTime + t + 0.16);
-            });
-        } catch (e) { console.warn('Audio:', e); }
+        const s = _loadSounds();
+        _playSound(s.endBreak || 'Ascending Beep');
     }
 
     // ── State calculation ─────────────────────────────────────────────
