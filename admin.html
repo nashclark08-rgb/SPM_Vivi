@@ -257,7 +257,7 @@
         <h2>&#128250; Online Teacher Status</h2>
         <p class="section-desc">Teachers in online meetings can scan a QR code, enter their name, and press a button — their name then appears live on the main display screen and the parent QR screen, alerting parents not to interrupt. Requires a free <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">Firebase Realtime Database</a>.</p>
         <div style="display:flex;gap:0.5rem;margin-bottom:1.1rem;flex-wrap:wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="showEmailTemplate()">&#128140; Generate Parent Email</button>
+            <button class="btn btn-secondary btn-sm" onclick="showEmailTemplate()">&#128140; Generate Teacher Email</button>
         </div>
         <div class="form-group" style="max-width:480px;margin-bottom:0.75rem">
             <label for="firebaseUrl">Firebase Realtime Database URL</label>
@@ -305,7 +305,11 @@
             <button class="modal-close" onclick="closeEmailModal()">&#215;</button>
         </div>
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Copy this email and paste it into your email client. Edit the content before sending.</p>
-        <textarea id="emailText" style="width:100%;height:340px;font-size:0.82rem;font-family:'Courier New',monospace;padding:0.75rem;border:1px solid var(--border);border-radius:6px;resize:vertical;line-height:1.65;color:var(--text);" readonly></textarea>
+        <textarea id="emailText" style="width:100%;height:300px;font-size:0.82rem;font-family:'Courier New',monospace;padding:0.75rem;border:1px solid var(--border);border-radius:6px;resize:vertical;line-height:1.65;color:var(--text);" readonly></textarea>
+        <div id="emailQRSection" style="display:none;margin-top:1rem;padding:0.85rem;border:1px solid var(--border);border-radius:8px;background:#FAFAFA;text-align:center;">
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.6rem">&#128247; Teacher QR Code — right-click the image and select <strong>Save image as…</strong> to attach it to your email.</p>
+            <div id="emailQRCode" style="display:inline-block;background:white;padding:8px;border:1px solid var(--border);border-radius:6px;line-height:0;"></div>
+        </div>
         <div style="display:flex;gap:0.5rem;margin-top:0.85rem;justify-content:flex-end;flex-wrap:wrap;">
             <button class="btn btn-secondary" onclick="closeEmailModal()">Close</button>
             <button class="btn btn-primary" onclick="copyEmailText()">&#128203; Copy to Clipboard</button>

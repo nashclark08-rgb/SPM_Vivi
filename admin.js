@@ -397,6 +397,7 @@ function printParentSheet() {
         roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     } catch(e) {}
     const primary = s.primaryColour || '#1565C0';
+    const eventName = s.sessionName || s.schoolName || 'Parent Teacher Interviews';
     const rows = sorted.map(t=>`<tr><td>${t.name||''}</td><td>${t.subject||''}</td><td>${t.room||''}</td></tr>`).join('');
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PTI Parent Sheet</title><style>
@@ -406,37 +407,31 @@ body{font-family:'Segoe UI',sans-serif;color:#212121;background:white;}
 .hdr{text-align:center;padding-bottom:12px;margin-bottom:16px;border-bottom:3px solid ${primary};}
 .logo{max-height:60px;display:block;margin:0 auto 8px;}
 .school{font-size:21px;font-weight:800;color:${primary};}
-.sub{font-size:13px;color:#616161;margin-top:3px;}
-.date{font-size:11px;color:#9E9E9E;margin-top:3px;}
-.qr-box{display:flex;align-items:center;gap:18px;background:#F5F7FA;border-radius:8px;padding:14px 18px;margin-bottom:16px;}
-#qrEl{width:130px;height:130px;flex-shrink:0;}
-.qt h2{font-size:14px;font-weight:700;color:${primary};margin-bottom:5px;}
-.qt p{font-size:11px;color:#616161;line-height:1.5;margin-bottom:3px;}
-.qt small{font-size:9px;color:#BDBDBD;word-break:break-all;}
+.event{font-size:14px;color:#616161;margin-top:4px;}
+.qr-section{text-align:center;margin-bottom:20px;}
+.qr-title{font-size:16px;font-weight:700;color:${primary};margin-bottom:12px;}
+#qrEl{display:inline-block;}
 .tbl-hdr{font-size:13px;font-weight:700;color:${primary};margin-bottom:7px;}
 table{width:100%;border-collapse:collapse;}
 th{background:${primary};color:white;padding:7px 9px;text-align:left;font-size:11px;}
 td{padding:6px 9px;border-bottom:1px solid #EEEEEE;font-size:11px;}
 tr:nth-child(even) td{background:#FAFAFA;}
-.foot{margin-top:14px;font-size:10px;color:#BDBDBD;text-align:center;}
 </style></head><body>
 <div class="hdr">
 ${s.logoDataUrl?`<img class="logo" src="${s.logoDataUrl}" alt="">`:''}
 <div class="school">${s.schoolName||'Parent Teacher Interviews'}</div>
-${s.sessionName?`<div class="sub">${s.sessionName}</div>`:''}
-<div class="date">${new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+${eventName!==s.schoolName?`<div class="event">${eventName}</div>`:''}
 </div>
-<div class="qr-box"><div id="qrEl"></div>
-<div class="qt"><h2>&#128247; Scan for Live Timer &amp; Room Locations</h2>
-<p>Point your phone camera at the QR code — no app needed.</p>
-<p>You will see the live countdown timer and every teacher's room.</p>
-<small>${roomsUrl}</small></div></div>
-<div class="tbl-hdr">Teacher Room Locations — Alphabetical Order</div>
+<div class="qr-section">
+<div class="qr-title">&#128247; Scan for Live Timer &amp; Room Locations</div>
+<div id="qrEl"></div>
+</div>
+<div class="tbl-hdr">Teacher Room Locations</div>
 <table><thead><tr><th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th></tr></thead>
 <tbody>${rows||'<tr><td colspan="3" style="text-align:center;color:#9E9E9E;font-style:italic;padding:14px">No teachers entered.</td></tr>'}</tbody></table>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <script>window.onload=function(){
-try{new QRCode(document.getElementById('qrEl'),{text:${JSON.stringify(roomsUrl)},width:130,height:130,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}
+try{new QRCode(document.getElementById('qrEl'),{text:${JSON.stringify(roomsUrl)},width:280,height:280,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}
 catch(e){document.getElementById('qrEl').textContent='QR unavailable';}
 setTimeout(function(){window.print();},700);};<\/script>
 </body></html>`);
@@ -446,17 +441,16 @@ setTimeout(function(){window.print();},700);};<\/script>
 // ── Email Template ────────────────────────────────────────────────
 function showEmailTemplate() {
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
-    const school = s.schoolName || '[School Name]';
-    const event  = s.sessionName || 'Parent Teacher Interviews';
+    const event = s.sessionName || 'Student Progress Meetings';
     document.getElementById('emailText').value =
 `Subject: ${event} — Online Interview Status Instructions for Staff
 
 Dear Staff,
 
-If you are conducting any Parent Teacher Interviews online via video call, please follow the steps below so parents are aware when you are in a meeting and should not be interrupted.
+If you are conducting any ${event} online via video call, please follow the steps below so parents are aware when you are in a meeting and should not be interrupted (if you wish).
 
 HOW TO SET YOUR ONLINE MEETING STATUS
-1. On the night, locate the QR code displayed at the staff entry point (or provided by your coordinator)
+1. On the day, use the QR code attached to this email
 2. Scan the QR code with your phone camera — no app required
 3. Enter your name when prompted
 4. Press "Start Online Meeting" at the beginning of each online interview
@@ -467,12 +461,30 @@ IMPORTANT NOTES
   • Keep the page open on your phone for the duration of the interview
   • If you end a meeting early, press "End Meeting Early" so your name is removed immediately
   • You will need to press the button again for each new online interview
-  • If you have any technical issues on the night, please see your coordinator
+  • If you have any technical issues on the day, please let me know
 
 Thank you for helping to make ${event} run smoothly.
 
-Kind regards,
-${school} Administration`;
+Kind regards,`;
+
+    // Render teacher QR in modal if Firebase is configured
+    const fbUrl = getFirebaseUrl();
+    const qrSection   = document.getElementById('emailQRSection');
+    const qrContainer = document.getElementById('emailQRCode');
+    qrContainer.innerHTML = '';
+    if (fbUrl) {
+        const iv   = parseInt(document.getElementById('interviewDuration').value) || 10;
+        const sn   = document.getElementById('schoolName').value.trim() || 'PTI';
+        const base = window.location.href.replace(/[^/]*$/, '');
+        const link = base + 'teacher.html?db=' + encodeURIComponent(fbUrl) + '&iv=' + iv + '&sn=' + encodeURIComponent(sn);
+        try {
+            new QRCode(qrContainer, { text: link, width: 180, height: 180,
+                colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+            qrSection.style.display = 'block';
+        } catch(e) { qrSection.style.display = 'none'; }
+    } else {
+        qrSection.style.display = 'none';
+    }
     document.getElementById('emailModal').classList.add('open');
 }
 
