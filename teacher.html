@@ -3,265 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>PTI — Online Meeting Status</title>
+    <title>Online Meeting Schedule</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
             --primary: #003B5C;
             --primary-dark: #002540;
             --active: #2E7D32;
-            --active-dark: #1B5E20;
             --danger: #C62828;
         }
+        html, body { height: 100%; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #F5F7FA; color: #212121; }
+        .page { min-height: 100%; display: flex; flex-direction: column; align-items: center; padding: 0 1.25rem 2.5rem; }
 
-        html, body {
-            height: 100%;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: #F5F7FA;
-            color: #212121;
-        }
-
-        .page {
-            min-height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 0 1.25rem 2.5rem;
-        }
-
-        /* ── Header ────────────────────────────── */
-        .hdr {
-            width: 100%;
-            background: var(--primary);
-            color: white;
-            text-align: center;
-            padding: 1.1rem 1.25rem;
-            margin-bottom: 2rem;
-        }
+        .hdr { width: 100%; background: var(--primary); color: white; text-align: center; padding: 1.1rem 1.25rem; margin-bottom: 2rem; }
         .hdr h1 { font-size: 1.15rem; font-weight: 700; }
-        .hdr p  { font-size: 0.8rem;  opacity: 0.8; margin-top: 0.2rem; }
+        .hdr p  { font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem; }
 
-        /* ── Cards ─────────────────────────────── */
-        .card {
-            width: 100%;
-            max-width: 440px;
-            background: white;
-            border-radius: 12px;
-            padding: 1.75rem 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+        .card { width: 100%; max-width: 480px; background: white; border-radius: 12px; padding: 1.75rem 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 0.4rem; }
+        .card > p, .card-desc { font-size: 0.875rem; color: #616161; line-height: 1.55; margin-bottom: 1.5rem; }
 
-        /* ── Setup view ────────────────────────── */
-        #setupView h2 {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.4rem;
-        }
-        #setupView p {
-            font-size: 0.875rem;
-            color: #616161;
-            line-height: 1.55;
-            margin-bottom: 1.5rem;
-        }
-        label {
-            display: block;
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: #424242;
-            margin-bottom: 0.4rem;
-        }
+        label { display: block; font-size: 0.82rem; font-weight: 600; color: #424242; margin-bottom: 0.4rem; }
         input[type="text"] {
-            width: 100%;
-            padding: 0.7rem 0.9rem;
-            font-size: 1rem;
-            border: 1.5px solid #BDBDBD;
-            border-radius: 8px;
-            font-family: inherit;
-            transition: border-color 0.15s, box-shadow 0.15s;
-            margin-bottom: 1.25rem;
+            width: 100%; padding: 0.7rem 0.9rem; font-size: 1rem;
+            border: 1.5px solid #BDBDBD; border-radius: 8px; font-family: inherit;
+            margin-bottom: 1.25rem; transition: border-color 0.15s, box-shadow 0.15s;
         }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(21,101,192,0.15);
-        }
+        input[type="text"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,59,92,0.15); }
 
-        /* ── Buttons ───────────────────────────── */
-        .btn-start {
-            display: block;
-            width: 100%;
-            padding: 1rem;
-            background: var(--primary);
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 700;
-            font-family: inherit;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-        }
+        /* Slot list */
+        .slot-section-label { font-size: 0.82rem; font-weight: 600; color: #424242; margin-bottom: 0.5rem; }
+        .select-all-row { display: flex; gap: 0.65rem; margin-bottom: 0.6rem; }
+        .btn-link { background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding: 0; font-family: inherit; }
+        .slot-list { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1.5rem; max-height: 300px; overflow-y: auto; border: 1px solid #E0E0E0; border-radius: 8px; padding: 0.35rem; }
+        .slot-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.1s; user-select: none; }
+        .slot-item:hover:not(.past) { background: #E6EFF5; }
+        .slot-item.past { opacity: 0.4; cursor: not-allowed; }
+        .slot-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; margin: 0; cursor: pointer; }
+        .slot-num  { font-size: 0.72rem; font-weight: 700; color: #9E9E9E; min-width: 40px; }
+        .slot-time { font-size: 0.9rem; font-weight: 500; flex: 1; }
+        .slot-past-tag { font-size: 0.7rem; color: #BDBDBD; }
+
+        /* Buttons */
+        .btn-start { display: block; width: 100%; padding: 1rem; background: var(--primary); color: white; font-size: 1.05rem; font-weight: 700; font-family: inherit; border: none; border-radius: 10px; cursor: pointer; transition: background 0.15s, transform 0.1s; }
         .btn-start:hover  { background: var(--primary-dark); }
         .btn-start:active { transform: translateY(1px); }
+        .btn-start:disabled { opacity: 0.6; cursor: wait; }
+        .btn-outline { display: block; width: 100%; padding: 0.85rem; background: white; font-size: 1rem; font-weight: 600; font-family: inherit; border-radius: 10px; cursor: pointer; margin-top: 0.75rem; transition: background 0.15s; }
+        .btn-danger  { color: var(--danger); border: 2px solid var(--danger); }
+        .btn-danger:hover  { background: #FFEBEE; }
+        .btn-primary-out  { color: var(--primary); border: 2px solid var(--primary); }
+        .btn-primary-out:hover { background: #E6EFF5; }
 
-        .btn-end {
-            display: block;
-            width: 100%;
-            padding: 0.85rem;
-            background: white;
-            color: var(--danger);
-            font-size: 1rem;
-            font-weight: 600;
-            font-family: inherit;
-            border: 2px solid var(--danger);
-            border-radius: 10px;
-            cursor: pointer;
-            margin-top: 1.25rem;
-            transition: background 0.15s;
-        }
-        .btn-end:hover { background: #FFEBEE; }
+        /* Scheduled view */
+        #scheduledView { text-align: center; }
+        .done-icon   { font-size: 3rem; margin-bottom: 0.75rem; }
+        .done-title  { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.75rem; }
+        .scheduled-times { text-align: left; background: #E8F5E9; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; line-height: 1.9; color: #1B5E20; }
+        .time-row::before { content: '✓  '; }
+        .cancelled-notice { color: #B71C1C; font-size: 0.875rem; }
 
-        /* ── Active view ───────────────────────── */
+        /* Active (ad-hoc) view */
         #activeView { text-align: center; }
-
-        .active-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #E8F5E9;
-            color: var(--active);
-            border: 1.5px solid #A5D6A7;
-            border-radius: 20px;
-            padding: 0.35rem 1rem;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-bottom: 1.25rem;
-        }
-        .active-dot {
-            width: 8px; height: 8px;
-            background: var(--active);
-            border-radius: 50%;
-            animation: adot 1.4s ease-in-out infinite;
-        }
-        @keyframes adot {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.3; }
-        }
-
-        .active-name {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: #212121;
-            margin-bottom: 0.4rem;
-            line-height: 1.2;
-        }
-        .active-sub {
-            font-size: 0.9rem;
-            color: #757575;
-            margin-bottom: 1.75rem;
-            line-height: 1.4;
-        }
-
-        .countdown-ring {
-            position: relative;
-            width: 160px;
-            height: 160px;
-            margin: 0 auto 1.5rem;
-        }
-        .countdown-ring svg {
-            transform: rotate(-90deg);
-            width: 160px; height: 160px;
-        }
+        .active-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: #E8F5E9; color: var(--active); border: 1.5px solid #A5D6A7; border-radius: 20px; padding: 0.35rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1.25rem; }
+        .active-dot { width: 8px; height: 8px; background: var(--active); border-radius: 50%; animation: adot 1.4s ease-in-out infinite; }
+        @keyframes adot { 0%, 100% { opacity:1; } 50% { opacity:0.3; } }
+        .active-name { font-size: 1.6rem; font-weight: 800; color: #212121; margin-bottom: 0.4rem; line-height: 1.2; }
+        .active-sub  { font-size: 0.9rem; color: #757575; margin-bottom: 1.75rem; line-height: 1.4; }
+        .countdown-ring { position: relative; width: 160px; height: 160px; margin: 0 auto 1.5rem; }
+        .countdown-ring svg { transform: rotate(-90deg); width: 160px; height: 160px; }
         .ring-bg   { fill: none; stroke: #E0E0E0; stroke-width: 10; }
-        .ring-fill { fill: none; stroke: var(--active); stroke-width: 10;
-                     stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-        .countdown-text {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-        .countdown-digits {
-            font-size: 2rem;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-            color: var(--active);
-            line-height: 1;
-        }
-        .countdown-label {
-            font-size: 0.65rem;
-            color: #9E9E9E;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-top: 0.2rem;
-        }
+        .ring-fill { fill: none; stroke: var(--active); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+        .countdown-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+        .countdown-digits { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--active); line-height: 1; }
+        .countdown-label  { font-size: 0.65rem; color: #9E9E9E; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.2rem; }
+        .display-note { background: #E3F2FD; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #003B5C; line-height: 1.5; }
 
-        .display-note {
-            background: #E3F2FD;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            font-size: 0.82rem;
-            color: #003B5C;
-            line-height: 1.5;
-        }
-
-        /* ── Done view ─────────────────────────── */
+        /* Done view */
         #doneView { text-align: center; }
-        .done-icon  { font-size: 3rem; margin-bottom: 0.75rem; }
-        .done-title { font-size: 1.4rem; font-weight: 700; color: #212121; margin-bottom: 0.4rem; }
-        .done-sub   { font-size: 0.9rem; color: #757575; margin-bottom: 1.5rem; line-height: 1.4; }
-        .btn-again {
-            display: block; width: 100%;
-            padding: 0.85rem;
-            background: var(--primary); color: white;
-            font-size: 1rem; font-weight: 600; font-family: inherit;
-            border: none; border-radius: 10px; cursor: pointer;
-        }
+        .done-sub { font-size: 0.9rem; color: #757575; margin-bottom: 1.5rem; line-height: 1.4; }
 
-        /* ── Error banner ──────────────────────── */
-        .err-banner {
-            width: 100%; max-width: 440px;
-            background: #FFEBEE;
-            color: #B71C1C;
-            border: 1px solid #EF9A9A;
-            border-radius: 8px;
-            padding: 0.7rem 1rem;
-            font-size: 0.85rem;
-            margin-top: 1rem;
-            display: none;
-        }
+        /* Error */
+        .err-banner { width: 100%; max-width: 480px; background: #FFEBEE; color: #B71C1C; border: 1px solid #EF9A9A; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.85rem; margin-top: 1rem; display: none; }
     </style>
 </head>
 <body>
-
 <div class="page">
     <header class="hdr">
-        <h1 id="hdrTitle">PTI — Online Meeting Status</h1>
-        <p id="hdrSub">Parent Teacher Interviews</p>
+        <h1 id="hdrTitle">Online Meeting Schedule</h1>
+        <p id="hdrSub">Student Progress Meetings</p>
     </header>
 
-    <!-- Setup view -->
+    <!-- Setup view (adapts to schedule or ad-hoc mode) -->
     <div class="card" id="setupView">
-        <h2>Online Meeting Check-In</h2>
-        <p>Enter your name below, then press the button when you start an online interview. Your name will appear on the main display screen until your interview time ends.</p>
+        <h2 id="setupTitle">Schedule Your Online Meetings</h2>
+        <p class="card-desc" id="setupDesc">Enter your name, then select every interview slot you'll be hosting online. Your name will appear on the display screen automatically during those times.</p>
+
         <label for="teacherNameInput">Your Name</label>
         <input type="text" id="teacherNameInput" placeholder="e.g. Ms Smith" autocomplete="name"
-               onkeydown="if(event.key==='Enter') startMeeting()">
-        <button class="btn-start" onclick="startMeeting()">&#128250; Start Online Meeting</button>
+               onkeydown="if(event.key==='Enter')handleSubmit()">
+
+        <div id="slotSection" style="display:none">
+            <div class="slot-section-label">Select your online interview slots:</div>
+            <div class="select-all-row">
+                <button class="btn-link" onclick="selectAll(true)">Select all</button>
+                <button class="btn-link" onclick="selectAll(false)">Clear all</button>
+            </div>
+            <div class="slot-list" id="slotList"></div>
+        </div>
+
+        <button class="btn-start" id="submitBtn" onclick="handleSubmit()">&#10003; Schedule My Online Meetings</button>
     </div>
 
-    <!-- Active meeting view -->
-    <div class="card" id="activeView" style="display:none">
-        <div class="active-badge">
-            <span class="active-dot"></span> Live — Online Meeting
-        </div>
-        <div class="active-name" id="activeName"></div>
-        <div class="active-sub" id="activeSub">Your name is showing on the display screen.<br>Do not close this page until your meeting ends.</div>
+    <!-- Scheduled confirmation -->
+    <div class="card" id="scheduledView" style="display:none">
+        <div class="done-icon" style="color:#2E7D32">&#10003;</div>
+        <div class="done-title">Scheduled!</div>
+        <div class="scheduled-times" id="scheduledTimes"></div>
+        <p style="font-size:0.82rem;color:#616161;line-height:1.5;margin-bottom:1rem;">Your name will appear automatically on the display screen during each selected slot. You can leave this page.</p>
+        <button class="btn-outline btn-danger" id="cancelBtn" onclick="cancelAll()">&#10006; Cancel All My Sessions</button>
+        <button class="btn-outline btn-primary-out" onclick="resetToSetup()">&#8635; Schedule Again</button>
+    </div>
 
+    <!-- Ad-hoc active view -->
+    <div class="card" id="activeView" style="display:none">
+        <div class="active-badge"><span class="active-dot"></span> Live — Online Meeting</div>
+        <div class="active-name" id="activeName"></div>
+        <div class="active-sub">Your name is showing on the display screen.<br>Do not close this page until your meeting ends.</div>
         <div class="countdown-ring">
             <svg viewBox="0 0 160 160">
                 <circle class="ring-bg"   cx="80" cy="80" r="70"/>
@@ -273,17 +141,16 @@
                 <div class="countdown-label">remaining</div>
             </div>
         </div>
-
         <div class="display-note">&#128273; Your name will be removed automatically when the countdown reaches zero.</div>
-        <button class="btn-end" onclick="endMeeting(false)">&#10006; End Meeting Early</button>
+        <button class="btn-outline btn-danger" style="margin-top:1.25rem" onclick="endMeeting()">&#10006; End Meeting Early</button>
     </div>
 
-    <!-- Done view -->
+    <!-- Ad-hoc done view -->
     <div class="card" id="doneView" style="display:none">
-        <div class="done-icon">&#10003;</div>
+        <div class="done-icon" style="color:#616161">&#10003;</div>
         <div class="done-title">Meeting Ended</div>
-        <div class="done-sub" id="doneSub">Your name has been removed from the display screen.</div>
-        <button class="btn-again" onclick="resetToSetup()">&#8635; Start Another Meeting</button>
+        <div class="done-sub">Your name has been removed from the display screen.</div>
+        <button class="btn-outline btn-primary-out" onclick="resetToSetup()">&#8635; Start Another Meeting</button>
     </div>
 
     <div class="err-banner" id="errBanner"></div>
@@ -291,135 +158,213 @@
 
 <script>
 // ── URL params ───────────────────────────────────────────────────
-const params = new URLSearchParams(window.location.search);
-const DB_URL = decodeURIComponent(params.get('db') || '').replace(/\/$/, '');
+const params  = new URLSearchParams(window.location.search);
+const DB_URL  = decodeURIComponent(params.get('db') || '').replace(/\/$/, '');
 const IV_MINS = Math.max(1, parseInt(params.get('iv') || '10'));
-const SN = decodeURIComponent(params.get('sn') || 'PTI');
+const BK_MINS = Math.max(0, parseInt(params.get('bk') || '0'));
+const NI      = parseInt(params.get('ni') || '0');
+const ST      = params.get('st') || '';
+const SN      = decodeURIComponent(params.get('sn') || 'Student Progress Meetings');
+const EV      = decodeURIComponent(params.get('ev') || '');
 
-// ── Init header ──────────────────────────────────────────────────
-document.getElementById('hdrTitle').textContent = SN + ' — Online Meeting Status';
-document.getElementById('hdrSub').textContent   = 'Interview duration: ' + IV_MINS + ' min';
+document.getElementById('hdrTitle').textContent = SN;
+document.getElementById('hdrSub').textContent   = EV || 'Online Meeting Schedule';
 
-// ── State ────────────────────────────────────────────────────────
+// ── Compute interview slots ──────────────────────────────────────
+function computeSlots() {
+    if (!ST || !NI || !IV_MINS) return [];
+    const [h, m] = ST.split(':').map(Number);
+    const base    = new Date(); base.setHours(h, m, 0, 0);
+    const ivMs    = IV_MINS * 60000;
+    const cycleMs = (IV_MINS + BK_MINS) * 60000;
+    const out     = [];
+    for (let i = 0; i < NI; i++) {
+        const from  = new Date(base.getTime() + i * cycleMs);
+        const until = new Date(from.getTime() + ivMs);
+        out.push({ from, until, idx: i + 1 });
+    }
+    return out;
+}
+
+function fmt12h(d) {
+    const h = d.getHours(), m = d.getMinutes();
+    return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
+const slots = computeSlots();
+const CIRC  = 2 * Math.PI * 70;
+
+// ── Build UI based on mode ───────────────────────────────────────
+if (slots.length) {
+    document.getElementById('slotSection').style.display = 'block';
+    const now = Date.now();
+    document.getElementById('slotList').innerHTML = slots.map((s, i) => {
+        const past = s.until.getTime() < now;
+        return `<label class="slot-item${past ? ' past' : ''}">
+            <input type="checkbox" class="slot-check" value="${i}"${past ? ' disabled' : ''}>
+            <span class="slot-num">Slot ${s.idx}</span>
+            <span class="slot-time">${fmt12h(s.from)} &ndash; ${fmt12h(s.until)}</span>
+            ${past ? '<span class="slot-past-tag">passed</span>' : ''}
+        </label>`;
+    }).join('');
+} else {
+    document.getElementById('setupTitle').textContent = 'Online Meeting Check-In';
+    document.getElementById('setupDesc').textContent  =
+        'Enter your name below, then press the button when you start an online interview. Your name will appear on the main display screen until your interview time ends.';
+    document.getElementById('submitBtn').innerHTML    = '&#128250; Start Online Meeting';
+}
+
+function selectAll(on) {
+    document.querySelectorAll('.slot-check:not([disabled])').forEach(c => c.checked = on);
+}
+
+// ── State (ad-hoc) ───────────────────────────────────────────────
 let meetingKey     = null;
 let meetingEndTime = null;
 let countdownTimer = null;
-const CIRC = 2 * Math.PI * 70; // circumference of r=70 circle
+let scheduledKeys  = [];
 
-// ── Show error ───────────────────────────────────────────────────
+// ── Error display ────────────────────────────────────────────────
 function showErr(msg) {
     const b = document.getElementById('errBanner');
     b.textContent = msg; b.style.display = 'block';
-    setTimeout(() => { b.style.display = 'none'; }, 5000);
+    setTimeout(() => { b.style.display = 'none'; }, 6000);
 }
 
-// ── Start meeting ────────────────────────────────────────────────
+// ── View helper ──────────────────────────────────────────────────
+function showOnly(id) {
+    ['setupView','scheduledView','activeView','doneView'].forEach(v =>
+        document.getElementById(v).style.display = v === id ? 'block' : 'none');
+}
+
+// ── Main submit dispatcher ───────────────────────────────────────
+function handleSubmit() {
+    if (slots.length) scheduleSlots();
+    else              startMeeting();
+}
+
+// ── Schedule mode ────────────────────────────────────────────────
+async function scheduleSlots() {
+    const name = document.getElementById('teacherNameInput').value.trim();
+    if (!name) { showErr('Please enter your name.'); return; }
+    if (!DB_URL) { showErr('Configuration error: no database URL. Please use the link from the setup email.'); return; }
+
+    const checked = [...document.querySelectorAll('.slot-check:checked')];
+    if (!checked.length) { showErr('Please select at least one slot.'); return; }
+
+    const selected = checked.map(c => slots[parseInt(c.value)]);
+    scheduledKeys  = [];
+
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = 'Saving\u2026'; btn.disabled = true;
+
+    try {
+        for (let i = 0; i < selected.length; i++) {
+            const s   = selected[i];
+            const key = 'sched_' + s.from.getTime() + '_' + Math.random().toString(36).slice(2, 6);
+            const r   = await fetch(DB_URL + '/pti-online/' + key + '.json', {
+                method: 'PUT',
+                body: JSON.stringify({ name, from: s.from.getTime(), until: s.until.getTime() }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            scheduledKeys.push(key);
+        }
+        document.getElementById('scheduledTimes').innerHTML =
+            selected.map(s => `<div class="time-row">${fmt12h(s.from)} &ndash; ${fmt12h(s.until)}</div>`).join('');
+        showOnly('scheduledView');
+    } catch(err) {
+        btn.innerHTML = '&#10003; Schedule My Online Meetings'; btn.disabled = false;
+        showErr('Could not save. Check your connection and try again. (' + err.message + ')');
+    }
+}
+
+async function cancelAll() {
+    const btn = document.getElementById('cancelBtn');
+    btn.textContent = 'Cancelling\u2026'; btn.disabled = true;
+    for (const key of scheduledKeys) {
+        await fetch(DB_URL + '/pti-online/' + key + '.json', { method: 'DELETE' }).catch(() => {});
+    }
+    scheduledKeys = [];
+    document.getElementById('scheduledTimes').innerHTML =
+        '<div class="cancelled-notice">&#10006;&#160;&#160;All sessions cancelled.</div>';
+    btn.style.display = 'none';
+}
+
+// ── Ad-hoc mode ──────────────────────────────────────────────────
 function startMeeting() {
     const name = document.getElementById('teacherNameInput').value.trim();
     if (!name) { showErr('Please enter your name.'); return; }
-    if (!DB_URL) { showErr('Configuration error: no database URL. Please rescan the QR code from the admin setup.'); return; }
+    if (!DB_URL) { showErr('Configuration error: no database URL.'); return; }
 
-    // Generate a unique key for this entry
     meetingKey     = 'teacher_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     meetingEndTime = Date.now() + IV_MINS * 60 * 1000;
 
-    const payload = JSON.stringify({ name: name, until: meetingEndTime, started: Date.now() });
-
     fetch(DB_URL + '/pti-online/' + meetingKey + '.json', {
         method: 'PUT',
-        body: payload,
+        body: JSON.stringify({ name, until: meetingEndTime, started: Date.now() }),
         headers: { 'Content-Type': 'application/json' }
     })
-    .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        showActive(name);
-    })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); showActive(name); })
     .catch(err => {
         meetingKey = null;
-        showErr('Could not connect to the database. Check your Wi-Fi and try again. (' + err.message + ')');
+        showErr('Could not connect. Check your Wi-Fi and try again. (' + err.message + ')');
     });
 }
 
-// ── Show active view ─────────────────────────────────────────────
 function showActive(name) {
     document.getElementById('activeName').textContent = name;
-    document.getElementById('setupView').style.display  = 'none';
-    document.getElementById('activeView').style.display = 'block';
-    document.getElementById('doneView').style.display   = 'none';
-
+    showOnly('activeView');
     updateCountdown();
     countdownTimer = setInterval(updateCountdown, 1000);
-
-    // Keep-alive: refresh Firebase entry every 30s in case connection was lost
     window._keepAlive = setInterval(() => {
         if (!meetingKey || !DB_URL) return;
-        const name = document.getElementById('activeName').textContent;
         fetch(DB_URL + '/pti-online/' + meetingKey + '/until.json', {
-            method: 'PUT',
-            body: String(meetingEndTime),
+            method: 'PUT', body: String(meetingEndTime),
             headers: { 'Content-Type': 'application/json' }
         }).catch(() => {});
     }, 30000);
 }
 
-// ── Countdown tick ───────────────────────────────────────────────
 function updateCountdown() {
     const left = Math.max(0, meetingEndTime - Date.now());
     const secs = Math.round(left / 1000);
-    const m    = Math.floor(secs / 60);
-    const s    = secs % 60;
     document.getElementById('countdownDigits').textContent =
-        String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-
-    // Animate ring
-    const totalSecs = IV_MINS * 60;
-    const progress  = left / (totalSecs * 1000); // 1.0 → 0.0
-    const offset    = CIRC * (1 - progress);
-    document.getElementById('ringFill').style.strokeDashoffset = offset;
-
+        String(Math.floor(secs / 60)).padStart(2,'0') + ':' + String(secs % 60).padStart(2,'0');
+    document.getElementById('ringFill').style.strokeDashoffset = CIRC * (1 - left / (IV_MINS * 60000));
     if (left <= 0) {
         clearInterval(countdownTimer);
         clearInterval(window._keepAlive);
         deleteMeetingEntry();
-        showDone(false);
+        showOnly('doneView');
     }
 }
 
-// ── End meeting early ────────────────────────────────────────────
-function endMeeting(auto) {
+function endMeeting() {
     clearInterval(countdownTimer);
     clearInterval(window._keepAlive);
     deleteMeetingEntry();
-    showDone(auto);
+    showOnly('doneView');
 }
 
-// ── Delete Firebase entry ────────────────────────────────────────
 function deleteMeetingEntry() {
     if (!meetingKey || !DB_URL) return;
-    fetch(DB_URL + '/pti-online/' + meetingKey + '.json', { method: 'DELETE' })
-        .catch(() => {}); // best-effort; the `until` timestamp acts as fallback expiry
+    fetch(DB_URL + '/pti-online/' + meetingKey + '.json', { method: 'DELETE' }).catch(() => {});
     meetingKey = null;
 }
 
-// ── Show done view ───────────────────────────────────────────────
-function showDone(auto) {
-    document.getElementById('doneSub').textContent = auto
-        ? 'Your interview time has ended. Your name has been removed from the display.'
-        : 'Your name has been removed from the display screen.';
-    document.getElementById('setupView').style.display  = 'none';
-    document.getElementById('activeView').style.display = 'none';
-    document.getElementById('doneView').style.display   = 'block';
-}
-
-// ── Reset to setup ───────────────────────────────────────────────
+// ── Reset ────────────────────────────────────────────────────────
 function resetToSetup() {
     document.getElementById('teacherNameInput').value = '';
-    document.getElementById('setupView').style.display  = 'block';
-    document.getElementById('activeView').style.display = 'none';
-    document.getElementById('doneView').style.display   = 'none';
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML  = slots.length ? '&#10003; Schedule My Online Meetings' : '&#128250; Start Online Meeting';
+    btn.disabled   = false;
+    const cb = document.getElementById('cancelBtn');
+    if (cb) { cb.style.display = 'block'; cb.disabled = false; cb.textContent = '\u2716 Cancel All My Sessions'; }
+    scheduledKeys = [];
+    showOnly('setupView');
 }
 
-// ── Safety: clean up on page unload ─────────────────────────────
 window.addEventListener('beforeunload', deleteMeetingEntry);
 </script>
 </body>

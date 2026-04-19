@@ -271,7 +271,9 @@
                 const now = Date.now(), names = [];
                 if (data && typeof data === 'object') {
                     Object.values(data).forEach(e => {
-                        if (e && e.name && e.until > now) names.push(e.name);
+                        if (!e || !e.name) return;
+                        const active = e.from ? (e.from <= now && e.until >= now) : e.until > now;
+                        if (active && !names.includes(e.name)) names.push(e.name);
                     });
                 }
                 const sec = document.getElementById('onlineSection');

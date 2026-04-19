@@ -332,14 +332,27 @@ function clearOnlineTeachers() {
         .catch(() => toast('Could not reach Firebase — check the URL.'));
 }
 
+function buildTeacherLink(dbUrl) {
+    const s    = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
+    const base = window.location.href.replace(/[^/]*$/, '');
+    const iv   = parseInt(document.getElementById('interviewDuration').value) || s.interviewDuration || 10;
+    const bk   = parseInt(document.getElementById('breakDuration').value)     || s.breakDuration     || 0;
+    const finish = document.getElementById('finishTime').value || s.finishTime || '';
+    const ni   = (st && finish && iv) ? calcN(st, finish, iv, bk) : (s.numberOfInterviews || 0);
+    const st   = document.getElementById('startTime').value || s.startTime || '';
+    const sn   = document.getElementById('schoolName').value.trim() || s.schoolName || 'SPM';
+    const ev   = s.sessionName || '';
+    return base + 'teacher.html?db=' + encodeURIComponent(dbUrl) +
+           '&iv=' + iv + '&bk=' + bk + '&ni=' + ni +
+           '&st=' + encodeURIComponent(st) +
+           '&sn=' + encodeURIComponent(sn) +
+           '&ev=' + encodeURIComponent(ev);
+}
+
 function generateTeacherQR(dbUrl) {
     dbUrl = (dbUrl||'').trim().replace(/\/$/,'');
     if (!dbUrl) { toast('Enter and save a Firebase URL first.'); return; }
-    const base = window.location.href.replace(/[^/]*$/, '');
-    const iv   = parseInt(document.getElementById('interviewDuration').value) || 10;
-    const sn   = document.getElementById('schoolName').value.trim() || 'PTI';
-    const link = base + 'teacher.html?db=' + encodeURIComponent(dbUrl) +
-                 '&iv=' + iv + '&sn=' + encodeURIComponent(sn);
+    const link = buildTeacherLink(dbUrl);
     const container = document.getElementById('teacherQRCode');
     container.innerHTML = '';
     try {
@@ -461,55 +474,60 @@ setTimeout(function(){window.print();},700);};<\/script>
 
 // ── Email Template ────────────────────────────────────────────────
 function showEmailTemplate() {
-    const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
+    const s     = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
     const event = s.sessionName || 'Student Progress Meetings';
+    const fbUrl = getFirebaseUrl();
+    const link  = fbUrl ? buildTeacherLink(fbUrl) : '[LINK — save Firebase URL first]';
+
     document.getElementById('emailText').value =
-`Subject: ${event} — Online Interview Status Instructions for Staff
+`Subject: ${event} — Online Interview Schedule
 
 Dear Staff,
 
-If you are conducting any ${event} online via video call, please follow the steps below so parents are aware when you are in a meeting and should not be interrupted (if you wish).
+If you are conducting any ${event} interviews online via video call, please pre-schedule your online slots using the link below so that parents can see when you are in a meeting.
 
-HOW TO SET YOUR ONLINE MEETING STATUS
-1. On the day, use the QR code attached to this email
-2. Scan the QR code with your phone camera — no app required
-3. Enter your name when prompted
-4. Press "Start Online Meeting" at the beginning of each online interview
-5. Your name will appear on the main display screen and the parent information screen with a "Currently in Online Meeting" indicator
-6. Your name will disappear automatically when the interview time ends — you do not need to do anything
+HOW TO PRE-SCHEDULE YOUR ONLINE MEETINGS
+1. Click (or copy and paste) the link below into your browser:
+
+   ${link}
+
+2. Enter your name when prompted
+3. Select each interview slot you will be hosting online
+4. Press "Schedule My Online Meetings" to confirm
+5. Your name will automatically appear on the main display screen during each of your selected time slots — no further action needed on the day
 
 IMPORTANT NOTES
-  • Keep the page open on your phone for the duration of the interview
-  • If you end a meeting early, press "End Meeting Early" so your name is removed immediately
-  • You will need to press the button again for each new online interview
-  • If you have any technical issues on the day, please let me know
+  • You only need to do this once before the session — all your slots are pre-scheduled
+  • If you are not hosting any online meetings, no action is required
+  • If a meeting ends early, open the link again and press "Cancel All My Sessions"
+  • If you have any technical issues, please let me know
 
 Thank you for helping to make ${event} run smoothly.
 
 Kind regards,`;
 
-    // Render teacher QR in modal if Firebase is configured
-    const fbUrl = getFirebaseUrl();
-    const qrSection   = document.getElementById('emailQRSection');
-    const qrContainer = document.getElementById('emailQRCode');
-    qrContainer.innerHTML = '';
+    // Show copyable link in modal
+    const linkSection = document.getElementById('emailLinkSection');
     if (fbUrl) {
-        const iv   = parseInt(document.getElementById('interviewDuration').value) || 10;
-        const sn   = document.getElementById('schoolName').value.trim() || 'PTI';
-        const base = window.location.href.replace(/[^/]*$/, '');
-        const link = base + 'teacher.html?db=' + encodeURIComponent(fbUrl) + '&iv=' + iv + '&sn=' + encodeURIComponent(sn);
-        try {
-            new QRCode(qrContainer, { text: link, width: 180, height: 180,
-                colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
-            qrSection.style.display = 'block';
-        } catch(e) { qrSection.style.display = 'none'; }
+        document.getElementById('emailLinkText').value = link;
+        linkSection.style.display = 'block';
     } else {
-        qrSection.style.display = 'none';
+        linkSection.style.display = 'none';
     }
     document.getElementById('emailModal').classList.add('open');
 }
 
 function closeEmailModal() { document.getElementById('emailModal').classList.remove('open'); }
+
+function copyLink() {
+    const el = document.getElementById('emailLinkText');
+    el.select(); el.setSelectionRange(0, 99999);
+    try {
+        navigator.clipboard.writeText(el.value)
+            .then(()=>toast('Link copied!'))
+            .catch(()=>{ document.execCommand('copy'); toast('Link copied!'); });
+    } catch(e) { document.execCommand('copy'); toast('Link copied!'); }
+}
 
 function copyEmailText() {
     const el = document.getElementById('emailText');

@@ -125,18 +125,18 @@
             <div class="form-group">
                 <label>Primary Colour</label>
                 <div class="color-field">
-                    <div class="color-opt-label">Option 1 — Colour Picker</div>
+                    <div class="color-opt-label">Colour Picker</div>
                     <div class="color-row">
                         <input type="color" id="primaryColour" value="#003B5C">
                         <span class="color-hex-display" id="primaryHex">#003B5C</span>
                     </div>
-                    <div class="color-opt-label">Option 2 — PMS / Pantone Code</div>
+                    <div class="color-opt-label">PMS / Pantone Code</div>
                     <div class="pms-row">
                         <input type="text" id="primaryPMS" class="pms-input" placeholder="e.g. 2965 C or 286">
                         <span class="color-swatch" id="primaryPMSSwatch"></span>
                         <span class="pms-status" id="primaryPMSStatus"></span>
                     </div>
-                    <div class="color-opt-label">Option 3 — HEX Code</div>
+                    <div class="color-opt-label">HEX Code</div>
                     <div class="hex-row">
                         <input type="text" id="primaryHEX" class="hex-input" placeholder="e.g. #003B5C">
                         <span class="color-swatch" id="primaryHEXSwatch"></span>
@@ -146,18 +146,18 @@
             <div class="form-group">
                 <label>Text / Secondary Colour</label>
                 <div class="color-field">
-                    <div class="color-opt-label">Option 1 — Colour Picker</div>
+                    <div class="color-opt-label">Colour Picker</div>
                     <div class="color-row">
                         <input type="color" id="secondaryColour" value="#FFFFFF">
                         <span class="color-hex-display" id="secondaryHex">#FFFFFF</span>
                     </div>
-                    <div class="color-opt-label">Option 2 — PMS / Pantone Code</div>
+                    <div class="color-opt-label">PMS / Pantone Code</div>
                     <div class="pms-row">
                         <input type="text" id="secondaryPMS" class="pms-input" placeholder="e.g. 2965 C or 286">
                         <span class="color-swatch" id="secondaryPMSSwatch"></span>
                         <span class="pms-status" id="secondaryPMSStatus"></span>
                     </div>
-                    <div class="color-opt-label">Option 3 — HEX Code</div>
+                    <div class="color-opt-label">HEX Code</div>
                     <div class="hex-row">
                         <input type="text" id="secondaryHEX" class="hex-input" placeholder="e.g. #FFFFFF">
                         <span class="color-swatch" id="secondaryHEXSwatch"></span>
@@ -319,18 +319,21 @@
 <div id="emailModal" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-hdr">
-            <h3>&#128140; Parent Email Template</h3>
+            <h3>&#128140; Staff Email Template</h3>
             <button class="modal-close" onclick="closeEmailModal()">&#215;</button>
         </div>
-        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Copy this email and paste it into your email client. Edit the content before sending.</p>
-        <textarea id="emailText" style="width:100%;height:300px;font-size:0.82rem;font-family:'Courier New',monospace;padding:0.75rem;border:1px solid var(--border);border-radius:6px;resize:vertical;line-height:1.65;color:var(--text);" readonly></textarea>
-        <div id="emailQRSection" style="display:none;margin-top:1rem;padding:0.85rem;border:1px solid var(--border);border-radius:8px;background:#FAFAFA;text-align:center;">
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.6rem">&#128247; Teacher QR Code — right-click the image and select <strong>Save image as…</strong> to attach it to your email.</p>
-            <div id="emailQRCode" style="display:inline-block;background:white;padding:8px;border:1px solid var(--border);border-radius:6px;line-height:0;"></div>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Copy this email and paste it into your email client. The link below is already embedded in the email text.</p>
+        <div id="emailLinkSection" style="display:none;margin-bottom:0.75rem;padding:0.75rem;border:1px solid var(--border);border-radius:8px;background:#FAFAFA;">
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Staff Scheduling Link</p>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <input id="emailLinkText" type="text" readonly style="font-size:0.75rem;font-family:'Courier New',monospace;background:white;flex:1;margin-bottom:0;">
+                <button class="btn btn-secondary btn-sm" onclick="copyLink()">&#128203; Copy</button>
+            </div>
         </div>
+        <textarea id="emailText" style="width:100%;height:300px;font-size:0.82rem;font-family:'Courier New',monospace;padding:0.75rem;border:1px solid var(--border);border-radius:6px;resize:vertical;line-height:1.65;color:var(--text);" readonly></textarea>
         <div style="display:flex;gap:0.5rem;margin-top:0.85rem;justify-content:flex-end;flex-wrap:wrap;">
             <button class="btn btn-secondary" onclick="closeEmailModal()">Close</button>
-            <button class="btn btn-primary" onclick="copyEmailText()">&#128203; Copy to Clipboard</button>
+            <button class="btn btn-primary" onclick="copyEmailText()">&#128203; Copy Email to Clipboard</button>
         </div>
     </div>
 </div>
