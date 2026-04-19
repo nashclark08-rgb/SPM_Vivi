@@ -283,8 +283,92 @@ function renderTable() {
 }
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function addRow(){ teacherRows.push({name:'',subject:'',room:''}); renderTable(); document.querySelectorAll('#teacherBody tr:last-child input')[0]?.focus(); }
+function addRow(data){ teacherRows.push(data||{name:'',subject:'',room:''}); renderTable(); if(!data) document.querySelectorAll('#teacherBody tr:last-child input')[0]?.focus(); }
 function removeRow(i){ teacherRows.splice(i,1); renderTable(); }
+
+// ── CSV Template & Upload ─────────────────────────────────────────
+function downloadCSVTemplate() {
+    const csv = 'Teacher Name,Subject / Year Level,Room\n"Smith, John","Year 10 Mathematics","Room 101"\n"Jones, Mary","Year 9 Science","Senior South 1.4"\n';
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'pti_teachers_template.csv';
+    a.click();
+}
+
+function _parseCSVLine(line) {
+    const result = []; let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+        else { cur += c; }
+    }
+    result.push(cur);
+    return result;
+}
+
+function uploadCSV(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+        const rows = lines.slice(1).map(l => {
+            const p = _parseCSVLine(l);
+            return { name:(p[0]||'').trim(), subject:(p[1]||'').trim(), room:(p[2]||'').trim() };
+        }).filter(r => r.name || r.subject || r.room);
+        if (!rows.length) { toast('No teacher data found in CSV.'); e.target.value = ''; return; }
+        rows.forEach(r => teacherRows.push(r));
+        renderTable();
+        toast(`Imported ${rows.length} teacher(s) from CSV.`);
+        e.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+// ── Firebase / Online Teacher Status ─────────────────────────────
+function getFirebaseUrl() { return (localStorage.getItem('pti_firebase_url')||'').replace(/\/$/,''); }
+
+function saveFirebaseConfig() {
+    const url = document.getElementById('firebaseUrl').value.trim().replace(/\/$/,'');
+    if (url && !url.startsWith('https://')) { toast('URL must start with https://'); return; }
+    if (url) {
+        localStorage.setItem('pti_firebase_url', url);
+        generateTeacherQR(url);
+        toast('Firebase URL saved.');
+    } else {
+        localStorage.removeItem('pti_firebase_url');
+        document.getElementById('teacherQRSection').style.display = 'none';
+        toast('Firebase URL cleared.');
+    }
+}
+
+function clearOnlineTeachers() {
+    const url = getFirebaseUrl();
+    if (!url) { toast('No Firebase URL saved yet.'); return; }
+    fetch(url + '/pti-online.json', { method: 'DELETE' })
+        .then(() => toast('All online statuses cleared.'))
+        .catch(() => toast('Could not reach Firebase — check the URL.'));
+}
+
+function generateTeacherQR(dbUrl) {
+    dbUrl = (dbUrl||'').trim().replace(/\/$/,'');
+    if (!dbUrl) { toast('Enter and save a Firebase URL first.'); return; }
+    const base = window.location.href.replace(/[^/]*$/, '');
+    const iv   = parseInt(document.getElementById('interviewDuration').value) || 10;
+    const sn   = document.getElementById('schoolName').value.trim() || 'PTI';
+    const link = base + 'teacher.html?db=' + encodeURIComponent(dbUrl) +
+                 '&iv=' + iv + '&sn=' + encodeURIComponent(sn);
+    const container = document.getElementById('teacherQRCode');
+    container.innerHTML = '';
+    try {
+        new QRCode(container, { text: link, width: 148, height: 148,
+            colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        document.getElementById('teacherQRSection').style.display = 'block';
+    } catch(ex) {
+        container.textContent = link;
+        document.getElementById('teacherQRSection').style.display = 'block';
+    }
+}
 
 document.getElementById('schoolLogo').addEventListener('change',function(){
     const file=this.files[0]; if(!file) return;
@@ -364,6 +448,13 @@ function init() {
     }
     renderSessionUI();
     document.getElementById('sessionNameInput').value=activeName||'';
+    // Load Firebase URL if previously saved
+    const savedFbUrl = getFirebaseUrl();
+    if (savedFbUrl) {
+        document.getElementById('firebaseUrl').value = savedFbUrl;
+        generateTeacherQR(savedFbUrl);
+    }
+
     bindPMSInput('primaryPMS','primaryColour','primaryHex','primaryPMSStatus');
     bindPMSInput('secondaryPMS','secondaryColour','secondaryHex','secondaryPMSStatus');
     document.getElementById('schoolName').addEventListener('input',updateBrandingPreview);

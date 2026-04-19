@@ -249,10 +249,49 @@
     </section>
 
     <section class="card">
+        <h2>&#128250; Online Teacher Status</h2>
+        <p class="section-desc">Teachers in online meetings can press a button so their name appears on the main display screen, alerting parents not to interrupt. Requires a free Firebase Realtime Database — <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">set one up here</a>, copy the database URL, and paste it below.</p>
+        <div class="form-group" style="max-width:480px">
+            <label for="firebaseUrl">Firebase Realtime Database URL</label>
+            <input type="text" id="firebaseUrl" placeholder="https://your-project-default-rtdb.firebaseio.com">
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-primary btn-sm" onclick="saveFirebaseConfig()">&#128190; Save URL</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearOnlineTeachers()">&#10006; Clear All Online Status</button>
+        </div>
+        <div id="teacherQRSection" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem">Teachers scan this QR code to set their online meeting status. Regenerate if you change the interview duration or school name.</p>
+            <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                <div>
+                    <div id="teacherQRCode" style="display:inline-block;background:white;padding:8px;border-radius:8px;line-height:0;"></div>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;text-align:center">teacher.html</p>
+                </div>
+                <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;padding-top:0.25rem">
+                    <strong style="color:var(--text)">Setup steps:</strong><br>
+                    1. Create a Firebase project &amp; Realtime Database<br>
+                    2. Set rules to <code style="font-size:0.78rem;background:#F5F5F5;padding:0.1rem 0.3rem;border-radius:3px">".read":true, ".write":true</code><br>
+                    3. Paste the database URL above &amp; save<br>
+                    4. Teachers scan this QR on PTI night<br>
+                    5. Names appear live on the display screen
+                </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem" onclick="generateTeacherQR(document.getElementById('firebaseUrl').value)">&#8635; Regenerate QR</button>
+        </div>
+    </section>
+
+    <section class="card">
         <h2>&#128203; Teacher &amp; Room Directory</h2>
         <p class="section-desc">Enter staff details so parents and teachers can locate their interview room. This information is accessible by scanning the QR code on the display screen.</p>
         <datalist id="deptDatalist"></datalist>
         <datalist id="roomDatalist"></datalist>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.85rem;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-secondary btn-sm" onclick="downloadCSVTemplate()">&#11123; Download Template</button>
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
+                &#128228; Upload CSV
+                <input type="file" id="csvUpload" accept=".csv,text/csv" style="display:none" onchange="uploadCSV(event)">
+            </label>
+            <span style="font-size:0.78rem;color:var(--text-muted)">Download the template, fill it in Excel/Sheets, then upload.</span>
+        </div>
         <div class="table-wrap">
             <table>
                 <thead>
@@ -277,6 +316,7 @@
 
 </main>
 <div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

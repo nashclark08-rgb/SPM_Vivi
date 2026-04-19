@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PTI — Online Meeting Status</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #1565C0;
+            --primary-dark: #0D47A1;
+            --active: #2E7D32;
+            --active-dark: #1B5E20;
+            --danger: #C62828;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #F5F7FA;
+            color: #212121;
+        }
+
+        .page {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 1.25rem 2.5rem;
+        }
+
+        /* ── Header ────────────────────────────── */
+        .hdr {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .hdr h1 { font-size: 1.15rem; font-weight: 700; }
+        .hdr p  { font-size: 0.8rem;  opacity: 0.8; margin-top: 0.2rem; }
+
+        /* ── Cards ─────────────────────────────── */
+        .card {
+            width: 100%;
+            max-width: 440px;
+            background: white;
+            border-radius: 12px;
+            padding: 1.75rem 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* ── Setup view ────────────────────────── */
+        #setupView h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.4rem;
+        }
+        #setupView p {
+            font-size: 0.875rem;
+            color: #616161;
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #424242;
+            margin-bottom: 0.4rem;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            font-size: 1rem;
+            border: 1.5px solid #BDBDBD;
+            border-radius: 8px;
+            font-family: inherit;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            margin-bottom: 1.25rem;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(21,101,192,0.15);
+        }
+
+        /* ── Buttons ───────────────────────────── */
+        .btn-start {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: inherit;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .btn-start:hover  { background: var(--primary-dark); }
+        .btn-start:active { transform: translateY(1px); }
+
+        .btn-end {
+            display: block;
+            width: 100%;
+            padding: 0.85rem;
+            background: white;
+            color: var(--danger);
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            border: 2px solid var(--danger);
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 1.25rem;
+            transition: background 0.15s;
+        }
+        .btn-end:hover { background: #FFEBEE; }
+
+        /* ── Active view ───────────────────────── */
+        #activeView { text-align: center; }
+
+        .active-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #E8F5E9;
+            color: var(--active);
+            border: 1.5px solid #A5D6A7;
+            border-radius: 20px;
+            padding: 0.35rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 1.25rem;
+        }
+        .active-dot {
+            width: 8px; height: 8px;
+            background: var(--active);
+            border-radius: 50%;
+            animation: adot 1.4s ease-in-out infinite;
+        }
+        @keyframes adot {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+
+        .active-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #212121;
+            margin-bottom: 0.4rem;
+            line-height: 1.2;
+        }
+        .active-sub {
+            font-size: 0.9rem;
+            color: #757575;
+            margin-bottom: 1.75rem;
+            line-height: 1.4;
+        }
+
+        .countdown-ring {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 1.5rem;
+        }
+        .countdown-ring svg {
+            transform: rotate(-90deg);
+            width: 160px; height: 160px;
+        }
+        .ring-bg   { fill: none; stroke: #E0E0E0; stroke-width: 10; }
+        .ring-fill { fill: none; stroke: var(--active); stroke-width: 10;
+                     stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+        .countdown-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .countdown-digits {
+            font-size: 2rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: var(--active);
+            line-height: 1;
+        }
+        .countdown-label {
+            font-size: 0.65rem;
+            color: #9E9E9E;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 0.2rem;
+        }
+
+        .display-note {
+            background: #E3F2FD;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: #1565C0;
+            line-height: 1.5;
+        }
+
+        /* ── Done view ─────────────────────────── */
+        #doneView { text-align: center; }
+        .done-icon  { font-size: 3rem; margin-bottom: 0.75rem; }
+        .done-title { font-size: 1.4rem; font-weight: 700; color: #212121; margin-bottom: 0.4rem; }
+        .done-sub   { font-size: 0.9rem; color: #757575; margin-bottom: 1.5rem; line-height: 1.4; }
+        .btn-again {
+            display: block; width: 100%;
+            padding: 0.85rem;
+            background: var(--primary); color: white;
+            font-size: 1rem; font-weight: 600; font-family: inherit;
+            border: none; border-radius: 10px; cursor: pointer;
+        }
+
+        /* ── Error banner ──────────────────────── */
+        .err-banner {
+            width: 100%; max-width: 440px;
+            background: #FFEBEE;
+            color: #B71C1C;
+            border: 1px solid #EF9A9A;
+            border-radius: 8px;
+            padding: 0.7rem 1rem;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <header class="hdr">
+        <h1 id="hdrTitle">PTI — Online Meeting Status</h1>
+        <p id="hdrSub">Parent Teacher Interviews</p>
+    </header>
+
+    <!-- Setup view -->
+    <div class="card" id="setupView">
+        <h2>Online Meeting Check-In</h2>
+        <p>Enter your name below, then press the button when you start an online interview. Your name will appear on the main display screen until your interview time ends.</p>
+        <label for="teacherNameInput">Your Name</label>
+        <input type="text" id="teacherNameInput" placeholder="e.g. Ms Smith" autocomplete="name"
+               onkeydown="if(event.key==='Enter') startMeeting()">
+        <button class="btn-start" onclick="startMeeting()">&#128250; Start Online Meeting</button>
+    </div>
+
+    <!-- Active meeting view -->
+    <div class="card" id="activeView" style="display:none">
+        <div class="active-badge">
+            <span class="active-dot"></span> Live — Online Meeting
+        </div>
+        <div class="active-name" id="activeName"></div>
+        <div class="active-sub" id="activeSub">Your name is showing on the display screen.<br>Do not close this page until your meeting ends.</div>
+
+        <div class="countdown-ring">
+            <svg viewBox="0 0 160 160">
+                <circle class="ring-bg"   cx="80" cy="80" r="70"/>
+                <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="70"
+                        stroke-dasharray="439.82" stroke-dashoffset="0"/>
+            </svg>
+            <div class="countdown-text">
+                <div class="countdown-digits" id="countdownDigits">--:--</div>
+                <div class="countdown-label">remaining</div>
+            </div>
+        </div>
+
+        <div class="display-note">&#128273; Your name will be removed automatically when the countdown reaches zero.</div>
+        <button class="btn-end" onclick="endMeeting(false)">&#10006; End Meeting Early</button>
+    </div>
+
+    <!-- Done view -->
+    <div class="card" id="doneView" style="display:none">
+        <div class="done-icon">&#10003;</div>
+        <div class="done-title">Meeting Ended</div>
+        <div class="done-sub" id="doneSub">Your name has been removed from the display screen.</div>
+        <button class="btn-again" onclick="resetToSetup()">&#8635; Start Another Meeting</button>
+    </div>
+
+    <div class="err-banner" id="errBanner"></div>
+</div>
+
+<script>
+// ── URL params ───────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const DB_URL = decodeURIComponent(params.get('db') || '').replace(/\/$/, '');
+const IV_MINS = Math.max(1, parseInt(params.get('iv') || '10'));
+const SN = decodeURIComponent(params.get('sn') || 'PTI');
+
+// ── Init header ──────────────────────────────────────────────────
+document.getElementById('hdrTitle').textContent = SN + ' — Online Meeting Status';
+document.getElementById('hdrSub').textContent   = 'Interview duration: ' + IV_MINS + ' min';
+
+// ── State ────────────────────────────────────────────────────────
+let meetingKey     = null;
+let meetingEndTime = null;
+let countdownTimer = null;
+const CIRC = 2 * Math.PI * 70; // circumference of r=70 circle
+
+// ── Show error ───────────────────────────────────────────────────
+function showErr(msg) {
+    const b = document.getElementById('errBanner');
+    b.textContent = msg; b.style.display = 'block';
+    setTimeout(() => { b.style.display = 'none'; }, 5000);
+}
+
+// ── Start meeting ────────────────────────────────────────────────
+function startMeeting() {
+    const name = document.getElementById('teacherNameInput').value.trim();
+    if (!name) { showErr('Please enter your name.'); return; }
+    if (!DB_URL) { showErr('Configuration error: no database URL. Please rescan the QR code from the admin setup.'); return; }
+
+    // Generate a unique key for this entry
+    meetingKey     = 'teacher_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    meetingEndTime = Date.now() + IV_MINS * 60 * 1000;
+
+    const payload = JSON.stringify({ name: name, until: meetingEndTime, started: Date.now() });
+
+    fetch(DB_URL + '/pti-online/' + meetingKey + '.json', {
+        method: 'PUT',
+        body: payload,
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        showActive(name);
+    })
+    .catch(err => {
+        meetingKey = null;
+        showErr('Could not connect to the database. Check your Wi-Fi and try again. (' + err.message + ')');
+    });
+}
+
+// ── Show active view ─────────────────────────────────────────────
+function showActive(name) {
+    document.getElementById('activeName').textContent = name;
+    document.getElementById('setupView').style.display  = 'none';
+    document.getElementById('activeView').style.display = 'block';
+    document.getElementById('doneView').style.display   = 'none';
+
+    updateCountdown();
+    countdownTimer = setInterval(updateCountdown, 1000);
+
+    // Keep-alive: refresh Firebase entry every 30s in case connection was lost
+    window._keepAlive = setInterval(() => {
+        if (!meetingKey || !DB_URL) return;
+        const name = document.getElementById('activeName').textContent;
+        fetch(DB_URL + '/pti-online/' + meetingKey + '/until.json', {
+            method: 'PUT',
+            body: String(meetingEndTime),
+            headers: { 'Content-Type': 'application/json' }
+        }).catch(() => {});
+    }, 30000);
+}
+
+// ── Countdown tick ───────────────────────────────────────────────
+function updateCountdown() {
+    const left = Math.max(0, meetingEndTime - Date.now());
+    const secs = Math.round(left / 1000);
+    const m    = Math.floor(secs / 60);
+    const s    = secs % 60;
+    document.getElementById('countdownDigits').textContent =
+        String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+
+    // Animate ring
+    const totalSecs = IV_MINS * 60;
+    const progress  = left / (totalSecs * 1000); // 1.0 → 0.0
+    const offset    = CIRC * (1 - progress);
+    document.getElementById('ringFill').style.strokeDashoffset = offset;
+
+    if (left <= 0) {
+        clearInterval(countdownTimer);
+        clearInterval(window._keepAlive);
+        deleteMeetingEntry();
+        showDone(false);
+    }
+}
+
+// ── End meeting early ────────────────────────────────────────────
+function endMeeting(auto) {
+    clearInterval(countdownTimer);
+    clearInterval(window._keepAlive);
+    deleteMeetingEntry();
+    showDone(auto);
+}
+
+// ── Delete Firebase entry ────────────────────────────────────────
+function deleteMeetingEntry() {
+    if (!meetingKey || !DB_URL) return;
+    fetch(DB_URL + '/pti-online/' + meetingKey + '.json', { method: 'DELETE' })
+        .catch(() => {}); // best-effort; the `until` timestamp acts as fallback expiry
+    meetingKey = null;
+}
+
+// ── Show done view ───────────────────────────────────────────────
+function showDone(auto) {
+    document.getElementById('doneSub').textContent = auto
+        ? 'Your interview time has ended. Your name has been removed from the display.'
+        : 'Your name has been removed from the display screen.';
+    document.getElementById('setupView').style.display  = 'none';
+    document.getElementById('activeView').style.display = 'none';
+    document.getElementById('doneView').style.display   = 'block';
+}
+
+// ── Reset to setup ───────────────────────────────────────────────
+function resetToSetup() {
+    document.getElementById('teacherNameInput').value = '';
+    document.getElementById('setupView').style.display  = 'block';
+    document.getElementById('activeView').style.display = 'none';
+    document.getElementById('doneView').style.display   = 'none';
+}
+
+// ── Safety: clean up on page unload ─────────────────────────────
+window.addEventListener('beforeunload', deleteMeetingEntry);
+</script>
+</body>
+</html>
