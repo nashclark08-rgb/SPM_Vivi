@@ -57,15 +57,6 @@
         .session-load-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: end; }
         .session-status { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem; }
         .session-badge { background: var(--primary); color: white; padding: 0.15rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
-        .chip-list { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 2.2rem; padding: 0.45rem; border: 1px solid var(--border); border-radius: 6px; background: #FAFAFA; margin-bottom: 0.5rem; }
-        .chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--primary); color: white; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.8rem; }
-        .chip button { background: none; border: none; color: rgba(255,255,255,0.8); cursor: pointer; font-size: 0.9rem; padding: 0; line-height: 1; }
-        .chip button:hover { color: white; }
-        .chip-input-row { display: flex; gap: 0.5rem; }
-        .chip-input-row input { flex: 1; }
-        .chip-empty { color: var(--text-muted); font-size: 0.8rem; font-style: italic; padding: 0.1rem 0.2rem; }
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-        @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
         .sound-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--border); }
         .sound-row:last-child { border-bottom: none; }
         .sound-label { min-width: 200px; font-size: 0.875rem; font-weight: 500; flex-shrink: 0; }
@@ -95,6 +86,13 @@
         .actions-bar .spacer { flex: 1; }
         .toast { position: fixed; bottom: 2rem; right: 2rem; background: #323232; color: white; padding: 0.7rem 1.2rem; border-radius: 6px; font-size: 0.875rem; opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 9999; max-width: 320px; }
         .toast.visible { opacity: 1; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.52); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: white; border-radius: 12px; padding: 1.75rem; max-width: 640px; width: 100%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .modal-hdr h3 { font-size: 1rem; font-weight: 700; color: var(--primary); }
+        .modal-close { background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0; }
+        .modal-close:hover { color: var(--text); }
     </style>
 </head>
 <body>
@@ -109,28 +107,7 @@
 
 <main>
 
-    <section class="card">
-        <h2>&#128190; Sessions</h2>
-        <p class="section-desc">Save named sessions to quickly switch between different PTI events without losing your settings.</p>
-        <div class="session-grid">
-            <div class="form-group">
-                <label for="sessionNameInput">Session Name</label>
-                <input type="text" id="sessionNameInput" placeholder="e.g. Year 7 Night — Term 2">
-            </div>
-            <button class="btn btn-primary btn-sm" style="align-self:end" onclick="saveSession()">&#128190; Save</button>
-            <button class="btn btn-secondary btn-sm" style="align-self:end" onclick="updateSession()">&#8635; Update</button>
-        </div>
-        <div class="session-load-row">
-            <div class="form-group" style="margin:0">
-                <label for="sessionSelect">Saved Sessions</label>
-                <select id="sessionSelect"><option value="">— No saved sessions —</option></select>
-            </div>
-            <button class="btn btn-secondary btn-sm" style="align-self:end" onclick="loadSelectedSession()">&#128194; Load</button>
-            <button class="btn btn-danger btn-sm" style="align-self:end" onclick="deleteSelectedSession()">&#128465; Delete</button>
-        </div>
-        <div class="session-status">Active: <span class="session-badge" id="sessionBadge">Unsaved</span></div>
-    </section>
-
+    <!-- 1. School Branding -->
     <section class="card">
         <h2>&#127968; School Branding</h2>
         <div class="form-grid">
@@ -179,29 +156,30 @@
         </div>
     </section>
 
+    <!-- 2. Sessions -->
     <section class="card">
-        <h2>&#128218; Subject / Year Levels &amp; Rooms</h2>
-        <p class="section-desc">Pre-enter your subjects and rooms. These appear as autocomplete suggestions in the teacher directory below.</p>
-        <div class="two-col">
-            <div>
-                <label style="display:block;margin-bottom:0.5rem">Subject / Year Levels</label>
-                <div class="chip-list" id="deptChips"><span class="chip-empty">No subjects added yet</span></div>
-                <div class="chip-input-row">
-                    <input type="text" id="deptInput" placeholder="e.g. Year 9 Mathematics" onkeydown="if(event.key==='Enter'){addDept();event.preventDefault();}">
-                    <button class="btn btn-secondary btn-sm" onclick="addDept()">+ Add</button>
-                </div>
+        <h2>&#128190; Sessions</h2>
+        <p class="section-desc">Save named sessions to quickly switch between different PTI events without losing your settings.</p>
+        <div class="session-grid">
+            <div class="form-group">
+                <label for="sessionNameInput">Session Name</label>
+                <input type="text" id="sessionNameInput" placeholder="e.g. Year 7 Night — Term 2">
             </div>
-            <div>
-                <label style="display:block;margin-bottom:0.5rem">Rooms</label>
-                <div class="chip-list" id="roomChips"><span class="chip-empty">No rooms added yet</span></div>
-                <div class="chip-input-row">
-                    <input type="text" id="roomInput" placeholder="e.g. Senior South 1.4" onkeydown="if(event.key==='Enter'){addRoom();event.preventDefault();}">
-                    <button class="btn btn-secondary btn-sm" onclick="addRoom()">+ Add</button>
-                </div>
-            </div>
+            <button class="btn btn-primary btn-sm" style="align-self:end" onclick="saveSession()">&#128190; Save</button>
+            <button class="btn btn-secondary btn-sm" style="align-self:end" onclick="updateSession()">&#8635; Update</button>
         </div>
+        <div class="session-load-row">
+            <div class="form-group" style="margin:0">
+                <label for="sessionSelect">Saved Sessions</label>
+                <select id="sessionSelect"><option value="">— No saved sessions —</option></select>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="align-self:end" onclick="loadSelectedSession()">&#128194; Load</button>
+            <button class="btn btn-danger btn-sm" style="align-self:end" onclick="deleteSelectedSession()">&#128465; Delete</button>
+        </div>
+        <div class="session-status">Active: <span class="session-badge" id="sessionBadge">Unsaved</span></div>
     </section>
 
+    <!-- 3. Session Timing -->
     <section class="card">
         <h2>&#128336; Session Timing</h2>
         <div class="form-grid">
@@ -225,6 +203,7 @@
         <div class="timing-preview" id="timingPreview"></div>
     </section>
 
+    <!-- 4. Sound Settings -->
     <section class="card">
         <h2>&#128266; Sound Settings</h2>
         <p class="section-desc">Choose which sound plays automatically on the display screen for each cue. Click &#9654; to preview.</p>
@@ -248,56 +227,22 @@
         </div>
     </section>
 
-    <section class="card">
-        <h2>&#128250; Online Teacher Status</h2>
-        <p class="section-desc">Teachers in online meetings can press a button so their name appears on the main display screen, alerting parents not to interrupt. Requires a free Firebase Realtime Database — <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">set one up here</a>, copy the database URL, and paste it below.</p>
-        <div class="form-group" style="max-width:480px">
-            <label for="firebaseUrl">Firebase Realtime Database URL</label>
-            <input type="text" id="firebaseUrl" placeholder="https://your-project-default-rtdb.firebaseio.com">
-        </div>
-        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;align-items:center;">
-            <button class="btn btn-primary btn-sm" onclick="saveFirebaseConfig()">&#128190; Save URL</button>
-            <button class="btn btn-secondary btn-sm" onclick="clearOnlineTeachers()">&#10006; Clear All Online Status</button>
-        </div>
-        <div id="teacherQRSection" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
-            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem">Teachers scan this QR code to set their online meeting status. Regenerate if you change the interview duration or school name.</p>
-            <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
-                <div>
-                    <div id="teacherQRCode" style="display:inline-block;background:white;padding:8px;border-radius:8px;line-height:0;"></div>
-                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;text-align:center">teacher.html</p>
-                </div>
-                <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;padding-top:0.25rem">
-                    <strong style="color:var(--text)">Setup steps:</strong><br>
-                    1. Create a Firebase project &amp; Realtime Database<br>
-                    2. Set rules to <code style="font-size:0.78rem;background:#F5F5F5;padding:0.1rem 0.3rem;border-radius:3px">".read":true, ".write":true</code><br>
-                    3. Paste the database URL above &amp; save<br>
-                    4. Teachers scan this QR on PTI night<br>
-                    5. Names appear live on the display screen
-                </div>
-            </div>
-            <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem" onclick="generateTeacherQR(document.getElementById('firebaseUrl').value)">&#8635; Regenerate QR</button>
-        </div>
-    </section>
-
+    <!-- 5. Teacher & Room Directory -->
     <section class="card">
         <h2>&#128203; Teacher &amp; Room Directory</h2>
-        <p class="section-desc">Enter staff details so parents and teachers can locate their interview room. This information is accessible by scanning the QR code on the display screen.</p>
-        <datalist id="deptDatalist"></datalist>
-        <datalist id="roomDatalist"></datalist>
+        <p class="section-desc">Enter staff details so parents can locate their interview room. Use the template to fill in bulk data via Excel or Google Sheets, then upload. The Print button generates an A4 sheet with the QR code and teacher list for display at the entrance.</p>
         <div style="display:flex;gap:0.5rem;margin-bottom:0.85rem;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-secondary btn-sm" onclick="downloadCSVTemplate()">&#11123; Download Template</button>
             <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
                 &#128228; Upload CSV
                 <input type="file" id="csvUpload" accept=".csv,text/csv" style="display:none" onchange="uploadCSV(event)">
             </label>
-            <span style="font-size:0.78rem;color:var(--text-muted)">Download the template, fill it in Excel/Sheets, then upload.</span>
+            <button class="btn btn-secondary btn-sm" onclick="printParentSheet()">&#128438; Print A4 Parent Sheet</button>
         </div>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr>
-                        <th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th><th style="width:44px"></th>
-                    </tr>
+                    <tr><th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th><th style="width:44px"></th></tr>
                 </thead>
                 <tbody id="teacherBody">
                     <tr><td colspan="4" class="empty-msg">No teachers added yet — click &quot;+ Add Teacher&quot; below.</td></tr>
@@ -307,6 +252,42 @@
         <button class="btn btn-secondary" onclick="addRow()">+ Add Teacher</button>
     </section>
 
+    <!-- 6. Online Teacher Status -->
+    <section class="card">
+        <h2>&#128250; Online Teacher Status</h2>
+        <p class="section-desc">Teachers in online meetings can scan a QR code, enter their name, and press a button — their name then appears live on the main display screen and the parent QR screen, alerting parents not to interrupt. Requires a free <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">Firebase Realtime Database</a>.</p>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.1rem;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="showEmailTemplate()">&#128140; Generate Parent Email</button>
+        </div>
+        <div class="form-group" style="max-width:480px;margin-bottom:0.75rem">
+            <label for="firebaseUrl">Firebase Realtime Database URL</label>
+            <input type="text" id="firebaseUrl" placeholder="https://your-project-default-rtdb.firebaseio.com">
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-primary btn-sm" onclick="saveFirebaseConfig()">&#128190; Save URL</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearOnlineTeachers()">&#10006; Clear All Online Status</button>
+        </div>
+        <div id="teacherQRSection" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem">Teachers scan this QR code on PTI night to set their online meeting status.</p>
+            <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                <div>
+                    <div id="teacherQRCode" style="display:inline-block;background:white;padding:8px;border-radius:8px;line-height:0;"></div>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;text-align:center">teacher.html</p>
+                </div>
+                <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.7;padding-top:0.25rem">
+                    <strong style="color:var(--text)">Setup steps:</strong><br>
+                    1. Create Firebase project &amp; Realtime Database<br>
+                    2. Set rules: <code style="font-size:0.78rem;background:#F5F5F5;padding:0.1rem 0.3rem;border-radius:3px">".read":true, ".write":true</code><br>
+                    3. Paste database URL above &amp; Save<br>
+                    4. Teachers scan this QR on PTI night<br>
+                    5. Names appear live on the display screen
+                </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:0.65rem" onclick="generateTeacherQR(document.getElementById('firebaseUrl').value)">&#8635; Regenerate QR</button>
+        </div>
+    </section>
+
+    <!-- 7. Actions bar -->
     <div class="actions-bar">
         <button class="btn btn-primary" onclick="saveAndLaunch()">&#9654; Save &amp; Launch Display</button>
         <button class="btn btn-secondary" onclick="previewRooms()">&#128269; Preview Room Overview</button>
@@ -315,6 +296,23 @@
     </div>
 
 </main>
+
+<!-- Email Template Modal -->
+<div id="emailModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-hdr">
+            <h3>&#128140; Parent Email Template</h3>
+            <button class="modal-close" onclick="closeEmailModal()">&#215;</button>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Copy this email and paste it into your email client. Edit the content before sending.</p>
+        <textarea id="emailText" style="width:100%;height:340px;font-size:0.82rem;font-family:'Courier New',monospace;padding:0.75rem;border:1px solid var(--border);border-radius:6px;resize:vertical;line-height:1.65;color:var(--text);" readonly></textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:0.85rem;justify-content:flex-end;flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="closeEmailModal()">Close</button>
+            <button class="btn btn-primary" onclick="copyEmailText()">&#128203; Copy to Clipboard</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="admin.js"></script>

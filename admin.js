@@ -1,6 +1,5 @@
 const KEYS = {
     settings:'pti_settings', teachers:'pti_teachers', sounds:'pti_sounds',
-    departments:'pti_departments', rooms:'pti_rooms',
     sessions:'pti_sessions_v2', active:'pti_active_session'
 };
 
@@ -117,52 +116,14 @@ function applySounds(s) {
     if (s.endBreak)     document.getElementById('soundEndBreak').value     = s.endBreak;
 }
 
-let deptList = [], roomList = [], teacherRows = [], logoDataUrl = '';
+let teacherRows = [], logoDataUrl = '';
 
-function addDept() {
-    const inp = document.getElementById('deptInput'), val = inp.value.trim();
-    if (!val) return;
-    if (!deptList.includes(val)) { deptList.push(val); renderDepts(); updateDataLists(); }
-    inp.value = ''; inp.focus();
-}
-function removeDept(i) { deptList.splice(i,1); renderDepts(); updateDataLists(); }
-function renderDepts() {
-    const el = document.getElementById('deptChips'); el.innerHTML = '';
-    if (!deptList.length) { el.innerHTML = '<span class="chip-empty">No subjects added yet</span>'; return; }
-    deptList.forEach((d,i) => {
-        const chip = document.createElement('span'); chip.className = 'chip';
-        chip.innerHTML = `${esc(d)} <button onclick="removeDept(${i})">&#215;</button>`;
-        el.appendChild(chip);
-    });
-}
-
-function addRoom() {
-    const inp = document.getElementById('roomInput'), val = inp.value.trim();
-    if (!val) return;
-    if (!roomList.includes(val)) { roomList.push(val); renderRooms(); updateDataLists(); }
-    inp.value = ''; inp.focus();
-}
-function removeRoom(i) { roomList.splice(i,1); renderRooms(); updateDataLists(); }
-function renderRooms() {
-    const el = document.getElementById('roomChips'); el.innerHTML = '';
-    if (!roomList.length) { el.innerHTML = '<span class="chip-empty">No rooms added yet</span>'; return; }
-    roomList.forEach((r,i) => {
-        const chip = document.createElement('span'); chip.className = 'chip';
-        chip.innerHTML = `${esc(r)} <button onclick="removeRoom(${i})">&#215;</button>`;
-        el.appendChild(chip);
-    });
-}
-function updateDataLists() {
-    document.getElementById('deptDatalist').innerHTML = deptList.map(d=>`<option value="${esc(d)}">`).join('');
-    document.getElementById('roomDatalist').innerHTML = roomList.map(r=>`<option value="${esc(r)}">`).join('');
-}
 
 function getAllSessions() { try { return JSON.parse(localStorage.getItem(KEYS.sessions))||{}; } catch { return {}; } }
 function getActiveName()  { return localStorage.getItem(KEYS.active)||''; }
 
 function buildPayload() {
-    return { settings: collectSettings(), teachers: teacherRows,
-             departments: deptList, rooms: roomList, sounds: collectSounds() };
+    return { settings: collectSettings(), teachers: teacherRows, sounds: collectSounds() };
 }
 
 function saveSession() {
@@ -199,9 +160,9 @@ function deleteSelectedSession() {
 }
 function applyPayload(s) {
     if (s.settings) applySettings(s.settings);
-    teacherRows = s.teachers||[]; deptList = s.departments||[]; roomList = s.rooms||[];
+    teacherRows = s.teachers||[];
     applySounds(s.sounds);
-    renderTable(); renderDepts(); renderRooms(); updateDataLists();
+    renderTable();
     updateBrandingPreview(); updateTimingPreview();
 }
 function renderSessionUI() {
@@ -219,11 +180,9 @@ function renderSessionUI() {
 
 function loadData(key, def) { try { return JSON.parse(localStorage.getItem(key))||def; } catch { return def; } }
 function persist() {
-    localStorage.setItem(KEYS.settings,    JSON.stringify(collectSettings()));
-    localStorage.setItem(KEYS.teachers,    JSON.stringify(teacherRows));
-    localStorage.setItem(KEYS.sounds,      JSON.stringify(collectSounds()));
-    localStorage.setItem(KEYS.departments, JSON.stringify(deptList));
-    localStorage.setItem(KEYS.rooms,       JSON.stringify(roomList));
+    localStorage.setItem(KEYS.settings,  JSON.stringify(collectSettings()));
+    localStorage.setItem(KEYS.teachers,  JSON.stringify(teacherRows));
+    localStorage.setItem(KEYS.sounds,    JSON.stringify(collectSounds()));
 }
 
 function toMins(t) { const [h,m]=t.split(':').map(Number); return h*60+m; }
@@ -275,8 +234,8 @@ function renderTable() {
     teacherRows.forEach((row,i)=>{
         const tr=document.createElement('tr');
         tr.innerHTML=`<td><input type="text" value="${esc(row.name)}" placeholder="Mr Nash Clark" oninput="teacherRows[${i}].name=this.value"></td>
-            <td><input type="text" value="${esc(row.subject)}" placeholder="Year 10 Maths" list="deptDatalist" oninput="teacherRows[${i}].subject=this.value"></td>
-            <td><input type="text" value="${esc(row.room)}" placeholder="Senior South 1.4" list="roomDatalist" oninput="teacherRows[${i}].room=this.value"></td>
+            <td><input type="text" value="${esc(row.subject)}" placeholder="Year 10 Maths" oninput="teacherRows[${i}].subject=this.value"></td>
+            <td><input type="text" value="${esc(row.room)}" placeholder="Senior South 1.4" oninput="teacherRows[${i}].room=this.value"></td>
             <td><button class="btn-remove" onclick="removeRow(${i})">&#10005;</button></td>`;
         tbody.appendChild(tr);
     });
@@ -420,6 +379,119 @@ function validate() {
     return true;
 }
 
+// ── Print A4 Parent Sheet ─────────────────────────────────────────
+function printParentSheet() {
+    const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
+    const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    const base = window.location.href.replace(/[^/]*$/, '');
+    let roomsUrl = base + 'rooms.html';
+    try {
+        const payload = {
+            t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
+            sn:s.schoolName||'', ev:s.sessionName||'',
+            p:s.primaryColour||'#1565C0', sc:s.secondaryColour||'#FFFFFF',
+            st:s.startTime||'', iv:s.interviewDuration||0,
+            bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
+            fb:localStorage.getItem('pti_firebase_url')||''
+        };
+        roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    } catch(e) {}
+    const primary = s.primaryColour || '#1565C0';
+    const rows = sorted.map(t=>`<tr><td>${t.name||''}</td><td>${t.subject||''}</td><td>${t.room||''}</td></tr>`).join('');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PTI Parent Sheet</title><style>
+*{box-sizing:border-box;margin:0;padding:0;}
+@page{size:A4;margin:16mm;}
+body{font-family:'Segoe UI',sans-serif;color:#212121;background:white;}
+.hdr{text-align:center;padding-bottom:12px;margin-bottom:16px;border-bottom:3px solid ${primary};}
+.logo{max-height:60px;display:block;margin:0 auto 8px;}
+.school{font-size:21px;font-weight:800;color:${primary};}
+.sub{font-size:13px;color:#616161;margin-top:3px;}
+.date{font-size:11px;color:#9E9E9E;margin-top:3px;}
+.qr-box{display:flex;align-items:center;gap:18px;background:#F5F7FA;border-radius:8px;padding:14px 18px;margin-bottom:16px;}
+#qrEl{width:130px;height:130px;flex-shrink:0;}
+.qt h2{font-size:14px;font-weight:700;color:${primary};margin-bottom:5px;}
+.qt p{font-size:11px;color:#616161;line-height:1.5;margin-bottom:3px;}
+.qt small{font-size:9px;color:#BDBDBD;word-break:break-all;}
+.tbl-hdr{font-size:13px;font-weight:700;color:${primary};margin-bottom:7px;}
+table{width:100%;border-collapse:collapse;}
+th{background:${primary};color:white;padding:7px 9px;text-align:left;font-size:11px;}
+td{padding:6px 9px;border-bottom:1px solid #EEEEEE;font-size:11px;}
+tr:nth-child(even) td{background:#FAFAFA;}
+.foot{margin-top:14px;font-size:10px;color:#BDBDBD;text-align:center;}
+</style></head><body>
+<div class="hdr">
+${s.logoDataUrl?`<img class="logo" src="${s.logoDataUrl}" alt="">`:''}
+<div class="school">${s.schoolName||'Parent Teacher Interviews'}</div>
+${s.sessionName?`<div class="sub">${s.sessionName}</div>`:''}
+<div class="date">${new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+</div>
+<div class="qr-box"><div id="qrEl"></div>
+<div class="qt"><h2>&#128247; Scan for Live Timer &amp; Room Locations</h2>
+<p>Point your phone camera at the QR code — no app needed.</p>
+<p>You will see the live countdown timer and every teacher's room.</p>
+<small>${roomsUrl}</small></div></div>
+<div class="tbl-hdr">Teacher Room Locations — Alphabetical Order</div>
+<table><thead><tr><th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th></tr></thead>
+<tbody>${rows||'<tr><td colspan="3" style="text-align:center;color:#9E9E9E;font-style:italic;padding:14px">No teachers entered.</td></tr>'}</tbody></table>
+<div class="foot">Please return this sheet to the front entrance after your interviews. Thank you for attending.</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+<script>window.onload=function(){
+try{new QRCode(document.getElementById('qrEl'),{text:${JSON.stringify(roomsUrl)},width:130,height:130,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}
+catch(e){document.getElementById('qrEl').textContent='QR unavailable';}
+setTimeout(function(){window.print();},700);};<\/script>
+</body></html>`);
+    win.document.close();
+}
+
+// ── Email Template ────────────────────────────────────────────────
+function showEmailTemplate() {
+    const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
+    const school = s.schoolName || '[School Name]';
+    const event  = s.sessionName || 'Parent Teacher Interviews';
+    document.getElementById('emailText').value =
+`Subject: ${event} — Important Information for Parents and Carers
+
+Dear Parents and Carers,
+
+Thank you for booking a Parent Teacher Interview at ${school}.
+
+FINDING YOUR TEACHER'S ROOM
+When you arrive, look for the main display screen showing the countdown timer. Scan the QR code on that screen with your phone camera (no app required). You will see:
+  • A live countdown timer synced to the display screen
+  • The room location for every teacher
+
+ONLINE INTERVIEWS
+Some teachers will be conducting interviews via video call. If you have booked an online interview:
+  • Your teacher will provide a meeting link prior to the evening
+  • Please be ready at your scheduled time
+  • On the main display screen, a "Currently in Online Meeting" indicator will show if a teacher is currently on a call — please wait until their name disappears
+
+ON THE NIGHT
+  • Please arrive a few minutes before your scheduled time
+  • The timer on screen shows the remaining time for the current interview
+  • A sound will play when each interview ends — move to your next teacher at that point
+  • If you need assistance, please see a staff member at the front entrance
+
+We look forward to seeing you.
+
+Kind regards,
+${school}`;
+    document.getElementById('emailModal').classList.add('open');
+}
+
+function closeEmailModal() { document.getElementById('emailModal').classList.remove('open'); }
+
+function copyEmailText() {
+    const el = document.getElementById('emailText');
+    el.select(); el.setSelectionRange(0, 99999);
+    try {
+        navigator.clipboard.writeText(el.value)
+            .then(()=>toast('Copied to clipboard!'))
+            .catch(()=>{ document.execCommand('copy'); toast('Copied to clipboard!'); });
+    } catch(e) { document.execCommand('copy'); toast('Copied to clipboard!'); }
+}
+
 function saveAndLaunch(){ if(!validate()) return; persist(); window.open('display.html','_blank'); }
 function previewRooms(){ persist(); window.open('rooms.html','_blank'); }
 function resetAll(){
@@ -442,10 +514,8 @@ function init() {
     } else {
         applySettings(loadData(KEYS.settings,{}));
         teacherRows=loadData(KEYS.teachers,[]);
-        deptList=loadData(KEYS.departments,[]);
-        roomList=loadData(KEYS.rooms,[]);
         applySounds(loadData(KEYS.sounds,{}));
-        renderTable(); renderDepts(); renderRooms(); updateDataLists();
+        renderTable();
         updateBrandingPreview(); updateTimingPreview();
     }
     renderSessionUI();
