@@ -434,7 +434,6 @@ ${s.sessionName?`<div class="sub">${s.sessionName}</div>`:''}
 <div class="tbl-hdr">Teacher Room Locations — Alphabetical Order</div>
 <table><thead><tr><th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th></tr></thead>
 <tbody>${rows||'<tr><td colspan="3" style="text-align:center;color:#9E9E9E;font-style:italic;padding:14px">No teachers entered.</td></tr>'}</tbody></table>
-<div class="foot">Please return this sheet to the front entrance after your interviews. Thank you for attending.</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <script>window.onload=function(){
 try{new QRCode(document.getElementById('qrEl'),{text:${JSON.stringify(roomsUrl)},width:130,height:130,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}
@@ -450,33 +449,30 @@ function showEmailTemplate() {
     const school = s.schoolName || '[School Name]';
     const event  = s.sessionName || 'Parent Teacher Interviews';
     document.getElementById('emailText').value =
-`Subject: ${event} — Important Information for Parents and Carers
+`Subject: ${event} — Online Interview Status Instructions for Staff
 
-Dear Parents and Carers,
+Dear Staff,
 
-Thank you for booking a Parent Teacher Interview at ${school}.
+If you are conducting any Parent Teacher Interviews online via video call, please follow the steps below so parents are aware when you are in a meeting and should not be interrupted.
 
-FINDING YOUR TEACHER'S ROOM
-When you arrive, look for the main display screen showing the countdown timer. Scan the QR code on that screen with your phone camera (no app required). You will see:
-  • A live countdown timer synced to the display screen
-  • The room location for every teacher
+HOW TO SET YOUR ONLINE MEETING STATUS
+1. On the night, locate the QR code displayed at the staff entry point (or provided by your coordinator)
+2. Scan the QR code with your phone camera — no app required
+3. Enter your name when prompted
+4. Press "Start Online Meeting" at the beginning of each online interview
+5. Your name will appear on the main display screen and the parent information screen with a "Currently in Online Meeting" indicator
+6. Your name will disappear automatically when the interview time ends — you do not need to do anything
 
-ONLINE INTERVIEWS
-Some teachers will be conducting interviews via video call. If you have booked an online interview:
-  • Your teacher will provide a meeting link prior to the evening
-  • Please be ready at your scheduled time
-  • On the main display screen, a "Currently in Online Meeting" indicator will show if a teacher is currently on a call — please wait until their name disappears
+IMPORTANT NOTES
+  • Keep the page open on your phone for the duration of the interview
+  • If you end a meeting early, press "End Meeting Early" so your name is removed immediately
+  • You will need to press the button again for each new online interview
+  • If you have any technical issues on the night, please see your coordinator
 
-ON THE NIGHT
-  • Please arrive a few minutes before your scheduled time
-  • The timer on screen shows the remaining time for the current interview
-  • A sound will play when each interview ends — move to your next teacher at that point
-  • If you need assistance, please see a staff member at the front entrance
-
-We look forward to seeing you.
+Thank you for helping to make ${event} run smoothly.
 
 Kind regards,
-${school}`;
+${school} Administration`;
     document.getElementById('emailModal').classList.add('open');
 }
 
