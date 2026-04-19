@@ -345,9 +345,9 @@ function buildTeacherLink(dbUrl) {
     const base = window.location.href.replace(/[^/]*$/, '');
     const iv   = parseInt(document.getElementById('interviewDuration').value) || s.interviewDuration || 10;
     const bk   = parseInt(document.getElementById('breakDuration').value)     || s.breakDuration     || 0;
+    const st   = document.getElementById('startTime').value || s.startTime || '';
     const finish = document.getElementById('finishTime').value || s.finishTime || '';
     const ni   = (st && finish && iv) ? calcN(st, finish, iv, bk) : (s.numberOfInterviews || 0);
-    const st   = document.getElementById('startTime').value || s.startTime || '';
     const sn   = document.getElementById('schoolName').value.trim() || s.schoolName || 'SPM';
     const ev   = s.sessionName || '';
     return base + 'teacher.html?db=' + encodeURIComponent(dbUrl) +
