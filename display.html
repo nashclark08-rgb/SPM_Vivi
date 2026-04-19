@@ -8,7 +8,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --primary:    #1565C0;
+            --primary:    #003B5C;
             --secondary:  #FFFFFF;
             --waiting-bg: #37474F;
             --done-bg:    #2E7D32;
@@ -414,12 +414,12 @@
         document.body.className = `s-${state.phase}`;
         const wm = document.getElementById('watermark');
         if (state.phase === 'interview') {
-            document.body.style.background = cfg.primaryColour  || '#1565C0';
+            document.body.style.background = cfg.primaryColour  || '#003B5C';
             document.body.style.color      = cfg.secondaryColour || '#FFFFFF';
             wm.style.display = 'block';
         } else if (state.phase === 'break') {
             document.body.style.background = cfg.secondaryColour || '#FFFFFF';
-            document.body.style.color      = cfg.primaryColour   || '#1565C0';
+            document.body.style.color      = cfg.primaryColour   || '#003B5C';
             wm.style.display = 'block';
         } else {
             document.body.style.background = '';
@@ -478,7 +478,7 @@
                 t:  teachers.map(t => ({ n: t.name || '', s: t.subject || '', r: t.room || '' })),
                 sn: cfg.schoolName    || '',
                 ev: cfg.sessionName   || '',
-                p:  cfg.primaryColour   || '#1565C0',
+                p:  cfg.primaryColour   || '#003B5C',
                 sc: cfg.secondaryColour || '#FFFFFF',
                 st: cfg.startTime          || '',
                 iv: cfg.interviewDuration  || 0,

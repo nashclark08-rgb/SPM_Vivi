@@ -22,6 +22,7 @@ const PANTONE = {
     '265':'#7B5EA7','266':'#6B3FA0','267':'#5C2D91','268':'#522D6D','269':'#41104C',
     '270':'#8B7BB5','272':'#6854A0','273':'#3B2E8C','274':'#2E2477','275':'#201B62',
     '279':'#5B8DB8','280':'#1B3D6F','281':'#003A70','282':'#00244A',
+    '2965':'#003B5C',
     '285':'#4882C5','286':'#003DA5','287':'#003087','288':'#002868','289':'#001B48',
     '292':'#68ACE5','293':'#005EB8','294':'#003087','295':'#002D56','296':'#011936',
     '299':'#00A3E0','300':'#0057A8','301':'#005B99','302':'#004B87','303':'#003F72',
@@ -59,19 +60,39 @@ function lookupPantone(raw) {
     return PANTONE[key] || null;
 }
 
-function bindPMSInput(inputId, colourId, hexId, statusId) {
-    document.getElementById(inputId).addEventListener('change', function() {
+function bindPMSInput(inputId, colourId, hexDisplayId, statusId, swatchId) {
+    document.getElementById(inputId).addEventListener('input', function() {
         const hex = lookupPantone(this.value);
         const status = document.getElementById(statusId);
+        const swatch = document.getElementById(swatchId);
         if (hex) {
             document.getElementById(colourId).value = hex;
-            document.getElementById(hexId).textContent = hex;
-            status.textContent = '✓ Found'; status.className = 'pms-status found';
+            document.getElementById(hexDisplayId).textContent = hex;
+            swatch.style.background = hex;
+            status.textContent = '✓ ' + hex; status.className = 'pms-status found';
             updateBrandingPreview();
         } else if (this.value.trim()) {
-            status.textContent = '✗ Not found'; status.className = 'pms-status notfound';
+            swatch.style.background = '#ccc';
+            status.textContent = '✗ Code not found'; status.className = 'pms-status notfound';
         } else {
+            swatch.style.background = '#ccc';
             status.textContent = ''; status.className = 'pms-status';
+        }
+    });
+}
+
+function bindHexInput(inputId, colourId, hexDisplayId, swatchId) {
+    document.getElementById(inputId).addEventListener('input', function() {
+        const raw = this.value.trim();
+        const hex = /^#?[0-9A-Fa-f]{6}$/.test(raw) ? (raw.startsWith('#') ? raw : '#' + raw) : null;
+        const swatch = document.getElementById(swatchId);
+        if (hex) {
+            document.getElementById(colourId).value = hex;
+            document.getElementById(hexDisplayId).textContent = hex;
+            swatch.style.background = hex;
+            updateBrandingPreview();
+        } else {
+            swatch.style.background = '#ccc';
         }
     });
 }
@@ -358,8 +379,8 @@ function collectSettings() {
 function applySettings(s) {
     if(!s) return;
     if(s.schoolName)        document.getElementById('schoolName').value=s.schoolName;
-    if(s.primaryColour)     document.getElementById('primaryColour').value=s.primaryColour;
-    if(s.secondaryColour)   document.getElementById('secondaryColour').value=s.secondaryColour;
+    if(s.primaryColour)  { document.getElementById('primaryColour').value=s.primaryColour; document.getElementById('primaryHex').textContent=s.primaryColour; }
+    if(s.secondaryColour){ document.getElementById('secondaryColour').value=s.secondaryColour; document.getElementById('secondaryHex').textContent=s.secondaryColour; }
     if(s.startTime)         document.getElementById('startTime').value=s.startTime;
     if(s.finishTime)        document.getElementById('finishTime').value=s.finishTime;
     if(s.interviewDuration) document.getElementById('interviewDuration').value=s.interviewDuration;
@@ -389,14 +410,14 @@ function printParentSheet() {
         const payload = {
             t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
             sn:s.schoolName||'', ev:s.sessionName||'',
-            p:s.primaryColour||'#1565C0', sc:s.secondaryColour||'#FFFFFF',
+            p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
             st:s.startTime||'', iv:s.interviewDuration||0,
             bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
             fb:localStorage.getItem('pti_firebase_url')||''
         };
         roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     } catch(e) {}
-    const primary = s.primaryColour || '#1565C0';
+    const primary = s.primaryColour || '#003B5C';
     const eventName = s.sessionName || s.schoolName || 'Parent Teacher Interviews';
     const rows = sorted.map(t=>`<tr><td>${t.name||''}</td><td>${t.subject||''}</td><td>${t.room||''}</td></tr>`).join('');
     const win = window.open('', '_blank');
@@ -535,11 +556,19 @@ function init() {
         generateTeacherQR(savedFbUrl);
     }
 
-    bindPMSInput('primaryPMS','primaryColour','primaryHex','primaryPMSStatus');
-    bindPMSInput('secondaryPMS','secondaryColour','secondaryHex','secondaryPMSStatus');
+    bindPMSInput('primaryPMS','primaryColour','primaryHex','primaryPMSStatus','primaryPMSSwatch');
+    bindPMSInput('secondaryPMS','secondaryColour','secondaryHex','secondaryPMSStatus','secondaryPMSSwatch');
+    bindHexInput('primaryHEX','primaryColour','primaryHex','primaryHEXSwatch');
+    bindHexInput('secondaryHEX','secondaryColour','secondaryHex','secondaryHEXSwatch');
     document.getElementById('schoolName').addEventListener('input',updateBrandingPreview);
-    document.getElementById('primaryColour').addEventListener('input',updateBrandingPreview);
-    document.getElementById('secondaryColour').addEventListener('input',updateBrandingPreview);
+    document.getElementById('primaryColour').addEventListener('input', function() {
+        document.getElementById('primaryHex').textContent = this.value;
+        updateBrandingPreview();
+    });
+    document.getElementById('secondaryColour').addEventListener('input', function() {
+        document.getElementById('secondaryHex').textContent = this.value;
+        updateBrandingPreview();
+    });
     ['startTime','finishTime','interviewDuration','breakDuration'].forEach(id=>
         document.getElementById(id).addEventListener('input',updateTimingPreview));
 }

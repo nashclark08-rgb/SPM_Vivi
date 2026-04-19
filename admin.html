@@ -7,7 +7,7 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --primary: #1565C0; --primary-dark: #0D47A1;
+            --primary: #003B5C; --primary-dark: #002540;
             --text: #212121; --text-muted: #757575;
             --bg: #F5F7FA; --card: #FFFFFF; --border: #E0E0E0;
             --danger: #C62828;
@@ -34,12 +34,14 @@
         }
         input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,101,192,0.15); }
         input[type="file"] { font-size: 0.85rem; color: var(--text-muted); cursor: pointer; }
-        .color-field { display: flex; flex-direction: column; gap: 0.4rem; }
+        .color-field { display: flex; flex-direction: column; gap: 0.55rem; }
+        .color-opt-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 0.15rem; }
         .color-row { display: flex; align-items: center; gap: 0.65rem; }
         input[type="color"] { width: 46px; height: 36px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 2px 3px; background: white; flex-shrink: 0; }
-        .color-hex { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; }
-        .pms-row { display: flex; align-items: center; gap: 0.4rem; }
-        .pms-input { font-size: 0.8rem !important; padding: 0.3rem 0.5rem !important; flex: 1; }
+        .color-hex-display { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; }
+        .pms-row, .hex-row { display: flex; align-items: center; gap: 0.4rem; }
+        .pms-input, .hex-input { font-size: 0.8rem !important; padding: 0.3rem 0.5rem !important; flex: 1; }
+        .color-swatch { width: 28px; height: 28px; border-radius: 5px; border: 1px solid var(--border); flex-shrink: 0; background: #ccc; }
         .pms-status { font-size: 0.72rem; white-space: nowrap; font-weight: 500; }
         .pms-status.found { color: var(--success-text); }
         .pms-status.notfound { color: var(--error-text); }
@@ -123,33 +125,49 @@
             <div class="form-group">
                 <label>Primary Colour</label>
                 <div class="color-field">
+                    <div class="color-opt-label">Option 1 — Colour Picker</div>
                     <div class="color-row">
-                        <input type="color" id="primaryColour" value="#1565C0">
-                        <span class="color-hex" id="primaryHex">#1565C0</span>
+                        <input type="color" id="primaryColour" value="#003B5C">
+                        <span class="color-hex-display" id="primaryHex">#003B5C</span>
                     </div>
+                    <div class="color-opt-label">Option 2 — PMS / Pantone Code</div>
                     <div class="pms-row">
-                        <input type="text" id="primaryPMS" class="pms-input" placeholder="Pantone / PMS code">
+                        <input type="text" id="primaryPMS" class="pms-input" placeholder="e.g. 2965 C or 286">
+                        <span class="color-swatch" id="primaryPMSSwatch"></span>
                         <span class="pms-status" id="primaryPMSStatus"></span>
+                    </div>
+                    <div class="color-opt-label">Option 3 — HEX Code</div>
+                    <div class="hex-row">
+                        <input type="text" id="primaryHEX" class="hex-input" placeholder="e.g. #003B5C">
+                        <span class="color-swatch" id="primaryHEXSwatch"></span>
                     </div>
                 </div>
             </div>
             <div class="form-group">
                 <label>Text / Secondary Colour</label>
                 <div class="color-field">
+                    <div class="color-opt-label">Option 1 — Colour Picker</div>
                     <div class="color-row">
                         <input type="color" id="secondaryColour" value="#FFFFFF">
-                        <span class="color-hex" id="secondaryHex">#FFFFFF</span>
+                        <span class="color-hex-display" id="secondaryHex">#FFFFFF</span>
                     </div>
+                    <div class="color-opt-label">Option 2 — PMS / Pantone Code</div>
                     <div class="pms-row">
-                        <input type="text" id="secondaryPMS" class="pms-input" placeholder="Pantone / PMS code">
+                        <input type="text" id="secondaryPMS" class="pms-input" placeholder="e.g. 2965 C or 286">
+                        <span class="color-swatch" id="secondaryPMSSwatch"></span>
                         <span class="pms-status" id="secondaryPMSStatus"></span>
+                    </div>
+                    <div class="color-opt-label">Option 3 — HEX Code</div>
+                    <div class="hex-row">
+                        <input type="text" id="secondaryHEX" class="hex-input" placeholder="e.g. #FFFFFF">
+                        <span class="color-swatch" id="secondaryHEXSwatch"></span>
                     </div>
                 </div>
             </div>
         </div>
         <div class="branding-preview">
             <p class="preview-label">Preview</p>
-            <div class="preview-bar" id="previewBar" style="background:#1565C0;color:#FFFFFF;">
+            <div class="preview-bar" id="previewBar" style="background:#003B5C;color:#FFFFFF;">
                 <img id="previewLogo" src="" alt="">
                 <span id="previewName">Your School Name</span>
             </div>
