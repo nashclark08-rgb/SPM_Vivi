@@ -61,29 +61,34 @@ function lookupPantone(raw) {
 }
 
 function bindPMSInput(inputId, colourId, hexDisplayId, statusId, swatchId) {
-    document.getElementById(inputId).addEventListener('input', function() {
-        const hex = lookupPantone(this.value);
+    const el = document.getElementById(inputId);
+    function run() {
+        const hex = lookupPantone(el.value);
         const status = document.getElementById(statusId);
         const swatch = document.getElementById(swatchId);
         if (hex) {
             document.getElementById(colourId).value = hex;
             document.getElementById(hexDisplayId).textContent = hex;
             swatch.style.background = hex;
-            status.textContent = '✓ ' + hex; status.className = 'pms-status found';
+            status.textContent = '\u2713 ' + hex; status.className = 'pms-status found';
             updateBrandingPreview();
-        } else if (this.value.trim()) {
+        } else if (el.value.trim()) {
             swatch.style.background = '#ccc';
-            status.textContent = '✗ Code not found'; status.className = 'pms-status notfound';
+            status.textContent = '\u2717 Code not found'; status.className = 'pms-status notfound';
         } else {
             swatch.style.background = '#ccc';
             status.textContent = ''; status.className = 'pms-status';
         }
-    });
+    }
+    el.addEventListener('input', run);
+    el.addEventListener('change', run);
+    el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); run(); } });
 }
 
 function bindHexInput(inputId, colourId, hexDisplayId, swatchId) {
-    document.getElementById(inputId).addEventListener('input', function() {
-        const raw = this.value.trim();
+    const el = document.getElementById(inputId);
+    function run() {
+        const raw = el.value.trim();
         const hex = /^#?[0-9A-Fa-f]{6}$/.test(raw) ? (raw.startsWith('#') ? raw : '#' + raw) : null;
         const swatch = document.getElementById(swatchId);
         if (hex) {
@@ -94,7 +99,10 @@ function bindHexInput(inputId, colourId, hexDisplayId, swatchId) {
         } else {
             swatch.style.background = '#ccc';
         }
-    });
+    }
+    el.addEventListener('input', run);
+    el.addEventListener('change', run);
+    el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); run(); } });
 }
 
 function playTone(ctx, type, freq, gain, start, stop) {
