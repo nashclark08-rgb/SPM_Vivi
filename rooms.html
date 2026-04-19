@@ -154,6 +154,46 @@
         @media (max-width: 420px) {
             thead th, tbody td { padding: 0.6rem 0.7rem; font-size: 0.83rem; }
         }
+
+        /* ── Online teacher panel ────────────────────── */
+        .online-card {
+            background: white;
+            border-radius: 8px;
+            padding: 0.65rem 1rem;
+            margin: 0.75rem 1rem 0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #FF5252;
+        }
+        .online-header {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #757575;
+            margin-bottom: 0.45rem;
+        }
+        .online-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #212121;
+            border-bottom: 1px solid #F5F5F5;
+        }
+        .online-item:last-child { border-bottom: none; }
+        .online-dot-sm {
+            width: 7px; height: 7px;
+            background: #FF5252;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: rdot 1.6s ease-in-out infinite;
+        }
+        @keyframes rdot {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
     </style>
 </head>
 <body>
@@ -174,6 +214,14 @@
                 <div class="next"  id="timerNext"></div>
             </div>
             <div class="timer-digits" id="timerDigits">--:--</div>
+        </div>
+    </div>
+
+    <!-- Online Teacher Panel -->
+    <div id="onlineSection" style="display:none">
+        <div class="online-card">
+            <div class="online-header">&#128250; Currently in Online Meeting — Please Do Not Disturb</div>
+            <div id="onlineList"></div>
         </div>
     </div>
 
@@ -209,9 +257,33 @@
                 st: s.startTime          || '',
                 iv: s.interviewDuration  || 0,
                 bk: s.breakDuration      || 0,
-                ni: s.numberOfInterviews || 0
+                ni: s.numberOfInterviews || 0,
+                fb: localStorage.getItem('pti_firebase_url') || ''
             };
         } catch(e) { return null; }
+    }
+
+    // ── Online Teachers (Firebase REST poll) ──────────────────────
+    function pollOnlineRooms(fbUrl) {
+        fetch(fbUrl.replace(/\/$/, '') + '/pti-online.json')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                const now = Date.now(), names = [];
+                if (data && typeof data === 'object') {
+                    Object.values(data).forEach(e => {
+                        if (e && e.name && e.until > now) names.push(e.name);
+                    });
+                }
+                const sec = document.getElementById('onlineSection');
+                if (names.length) {
+                    document.getElementById('onlineList').innerHTML =
+                        names.map(n => `<div class="online-item"><span class="online-dot-sm"></span>${n}</div>`).join('');
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            })
+            .catch(() => {});
     }
 
     // ── Timer helpers ─────────────────────────────────────────────────
@@ -227,6 +299,10 @@
         const d = new Date(); d.setHours(h, m, 0, 0); return d;
     }
 
+    // Offset (seconds) to keep parent timer aligned with display screen.
+    // Increase if parent timer runs behind; decrease if it runs ahead.
+    const SYNC_OFFSET_SECS = 6;
+
     function getTimerState(d) {
         const now    = new Date();
         const start  = timeToDate(d.st);
@@ -238,7 +314,7 @@
 
         if (now < start) return { phase: 'waiting', at: start };
 
-        const elapsed = (now - start) / 1000;
+        const elapsed = (now - start) / 1000 + SYNC_OFFSET_SECS;
         if (bkSecs === 0) {
             const idx = Math.floor(elapsed / ivSecs);
             if (idx >= total) return { phase: 'complete' };
@@ -320,6 +396,12 @@
             tick();
             // Align to same whole-second boundary as display.html so both show identical digits
             setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (Date.now() % 1000));
+        }
+
+        // Online teachers (if Firebase URL is in payload)
+        if (d.fb) {
+            pollOnlineRooms(d.fb);
+            setInterval(() => pollOnlineRooms(d.fb), 5000);
         }
 
         // Teacher table

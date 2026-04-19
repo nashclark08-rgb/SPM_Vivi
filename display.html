@@ -181,9 +181,9 @@
         /* ── Online teacher panel ────────────────────── */
         .online-panel {
             position: absolute;
-            bottom: 1.4rem;
-            left: 1.6rem;
-            text-align: left;
+            top: 0.8rem;
+            right: 1rem;
+            text-align: right;
             max-width: 42%;
         }
         .online-panel-title {
@@ -197,6 +197,7 @@
         .online-name {
             display: flex;
             align-items: center;
+            justify-content: flex-end;
             gap: 0.45rem;
             font-size: clamp(0.85rem, 1.5vw, 1.15rem);
             font-weight: 600;
@@ -482,7 +483,8 @@
                 st: cfg.startTime          || '',
                 iv: cfg.interviewDuration  || 0,
                 bk: cfg.breakDuration      || 0,
-                ni: cfg.numberOfInterviews || 0
+                ni: cfg.numberOfInterviews || 0,
+                fb: localStorage.getItem('pti_firebase_url') || ''
             };
             const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
             roomsUrl = base + 'rooms.html#' + encoded;
@@ -551,7 +553,7 @@
                 const panel = document.getElementById('onlinePanel');
                 if (names.length) {
                     document.getElementById('onlineNames').innerHTML =
-                        names.map(n => `<div class="online-name"><span class="online-dot"></span>${n}</div>`).join('');
+                        names.map(n => `<div class="online-name">${n}<span class="online-dot"></span></div>`).join('');
                     panel.style.display = 'block';
                 } else {
                     panel.style.display = 'none';
