@@ -253,6 +253,8 @@ function updateBrandingPreview() {
     document.getElementById('secondaryHex').textContent=sec;
 }
 
+function updateTeacher(i, field, val) { if (teacherRows[i]) teacherRows[i][field] = val; }
+
 function renderTable() {
     const tbody=document.getElementById('teacherBody');
     if(!teacherRows.length){
@@ -262,16 +264,34 @@ function renderTable() {
     tbody.innerHTML='';
     teacherRows.forEach((row,i)=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td><input type="text" value="${esc(row.name)}" placeholder="Mr Nash Clark" oninput="teacherRows[${i}].name=this.value"></td>
-            <td><input type="text" value="${esc(row.subject)}" placeholder="Year 10 Maths" oninput="teacherRows[${i}].subject=this.value"></td>
-            <td><input type="text" value="${esc(row.room)}" placeholder="Senior South 1.4" oninput="teacherRows[${i}].room=this.value"></td>
-            <td><button class="btn-remove" onclick="removeRow(${i})">&#10005;</button></td>`;
+        const nameEl    = document.createElement('td');
+        const subjectEl = document.createElement('td');
+        const roomEl    = document.createElement('td');
+        const btnEl     = document.createElement('td');
+
+        function makeInput(val, placeholder, field) {
+            const inp = document.createElement('input');
+            inp.type = 'text'; inp.value = val||''; inp.placeholder = placeholder;
+            inp.addEventListener('input', function() { updateTeacher(i, field, this.value); });
+            return inp;
+        }
+
+        nameEl.appendChild(makeInput(row.name,    'Mr Nash Clark',    'name'));
+        subjectEl.appendChild(makeInput(row.subject, 'Year 10 Maths', 'subject'));
+        roomEl.appendChild(makeInput(row.room,    'Senior South 1.4', 'room'));
+
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn-remove'; btn.innerHTML = '&#10005;';
+        btn.addEventListener('click', function() { removeRow(i); });
+        btnEl.appendChild(btn);
+
+        tr.append(nameEl, subjectEl, roomEl, btnEl);
         tbody.appendChild(tr);
     });
 }
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function addRow(data){ teacherRows.push(data||{name:'',subject:'',room:''}); renderTable(); if(!data) document.querySelectorAll('#teacherBody tr:last-child input')[0]?.focus(); }
+function addRow(data){ teacherRows.push(data||{name:'',subject:'',room:''}); renderTable(); const inputs=document.querySelectorAll('#teacherBody tr:last-child input'); if(inputs.length&&!data) inputs[0].focus(); }
 function removeRow(i){ teacherRows.splice(i,1); renderTable(); }
 
 // ── CSV Template & Upload ─────────────────────────────────────────
