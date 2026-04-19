@@ -292,7 +292,9 @@ function downloadCSVTemplate() {
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     a.download = 'pti_teachers_template.csv';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
 }
 
 function _parseCSVLine(line) {
