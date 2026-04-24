@@ -257,6 +257,8 @@ function updateTeacher(i, field, val) { if (teacherRows[i]) teacherRows[i][field
 
 function renderTable() {
     const tbody=document.getElementById('teacherBody');
+    const countEl=document.getElementById('teacherCount');
+    if(countEl) countEl.textContent=teacherRows.length ? teacherRows.length+' teacher'+(teacherRows.length!==1?'s':'') : '';
     if(!teacherRows.length){
         tbody.innerHTML='<tr><td colspan="4" class="empty-msg">No teachers added yet — click &quot;+ Add Teacher&quot; below.</td></tr>';
         return;

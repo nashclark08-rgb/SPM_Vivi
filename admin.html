@@ -63,9 +63,10 @@
         .sound-row:last-child { border-bottom: none; }
         .sound-label { min-width: 200px; font-size: 0.875rem; font-weight: 500; flex-shrink: 0; }
         .sound-row select { flex: 1; }
-        .table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+        .table-wrap { overflow-x: auto; overflow-y: auto; max-height: 360px; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 6px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-        thead th { background: var(--bg); padding: 0.55rem 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--border); }
+        thead th { background: var(--bg); padding: 0.55rem 0.75rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 1; }
+        .sticky-card { position: sticky; top: 1rem; z-index: 10; }
         tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
         tbody tr:last-child { border-bottom: none; }
         tbody tr:hover { background: #FAFAFA; }
@@ -267,11 +268,14 @@
                 </tbody>
             </table>
         </div>
-        <button type="button" class="btn btn-secondary" onclick="addRow()">+ Add Teacher</button>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="addRow()">+ Add Teacher</button>
+            <span id="teacherCount" style="font-size:0.82rem;color:var(--text-muted);"></span>
+        </div>
     </section>
 
     <!-- 6. Online Teacher Status -->
-    <section class="card">
+    <section class="card sticky-card">
         <h2>&#128250; Online Teacher Status</h2>
         <p class="section-desc">Teachers in online meetings can scan a QR code, enter their name, and press a button — their name then appears live on the main display screen and the parent QR screen, alerting parents not to interrupt. Requires a free <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">Firebase Realtime Database</a>.</p>
         <div style="display:flex;gap:0.5rem;margin-bottom:1.1rem;flex-wrap:wrap;">
