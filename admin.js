@@ -460,27 +460,9 @@ function printParentSheet() {
         };
         roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     } catch(e) {}
-
-    // Generate QR code here (QRCode.js already loaded on this page), convert canvas → PNG data URL.
-    // Embedding as <img> avoids canvas printing failures and CDN dependency in the print window.
-    let qrDataUrl = '';
-    try {
-        const tmp = document.createElement('div');
-        tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-        document.body.appendChild(tmp);
-        new QRCode(tmp, { text: roomsUrl, width: 280, height: 280, colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        const canvas = tmp.querySelector('canvas');
-        if (canvas) qrDataUrl = canvas.toDataURL('image/png');
-        document.body.removeChild(tmp);
-    } catch(e) {}
-
     const primary = s.primaryColour || '#003B5C';
     const eventName = s.sessionName || s.schoolName || 'Parent Teacher Interviews';
     const rows = sorted.map(t=>`<tr><td>${t.name||''}</td><td>${t.subject||''}</td><td>${t.room||''}</td></tr>`).join('');
-    const qrHtml = qrDataUrl
-        ? `<img src="${qrDataUrl}" width="280" height="280" alt="QR Code" style="display:block;margin:0 auto;">`
-        : `<p style="color:#999;font-size:12px;">QR code unavailable — ensure settings are saved.</p>`;
-
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PTI Parent Sheet</title><style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -492,6 +474,7 @@ body{font-family:'Segoe UI',sans-serif;color:#212121;background:white;}
 .event{font-size:14px;color:#616161;margin-top:4px;}
 .qr-section{text-align:center;margin-bottom:20px;}
 .qr-title{font-size:16px;font-weight:700;color:${primary};margin-bottom:12px;}
+#qrEl{display:inline-block;}
 .tbl-hdr{font-size:13px;font-weight:700;color:${primary};margin-bottom:7px;}
 table{width:100%;border-collapse:collapse;}
 th{background:${primary};color:white;padding:7px 9px;text-align:left;font-size:11px;}
@@ -505,12 +488,38 @@ ${eventName!==s.schoolName?`<div class="event">${eventName}</div>`:''}
 </div>
 <div class="qr-section">
 <div class="qr-title">&#128247; Scan for Live Timer &amp; Room Locations</div>
-${qrHtml}
+<div id="qrEl"></div>
 </div>
 <div class="tbl-hdr">Teacher Room Locations</div>
 <table><thead><tr><th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th></tr></thead>
 <tbody>${rows||'<tr><td colspan="3" style="text-align:center;color:#9E9E9E;font-style:italic;padding:14px">No teachers entered.</td></tr>'}</tbody></table>
-<script>window.onload=function(){window.print();};<\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+<script>
+window.onload = function() {
+    var el = document.getElementById('qrEl');
+    if (typeof QRCode !== 'undefined') {
+        try {
+            new QRCode(el, { text: ${JSON.stringify(roomsUrl)}, width: 280, height: 280,
+                colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.L });
+        } catch(e) { el.textContent = 'QR generation failed'; }
+    } else {
+        el.textContent = 'QR library not loaded';
+    }
+    // Canvas elements do not print reliably — replace with an img before printing
+    setTimeout(function() {
+        var canvas = el.querySelector('canvas');
+        if (canvas) {
+            try {
+                var img = document.createElement('img');
+                img.src = canvas.toDataURL('image/png');
+                img.width = 280; img.height = 280;
+                el.innerHTML = ''; el.appendChild(img);
+            } catch(ex) {}
+        }
+        window.print();
+    }, 1200);
+};
+<\/script>
 </body></html>`);
     win.document.close();
 }
