@@ -70,11 +70,11 @@ function bindPMSInput(inputId, colourId, hexDisplayId, statusId, swatchId) {
             document.getElementById(colourId).value = hex;
             document.getElementById(hexDisplayId).textContent = hex;
             swatch.style.background = hex;
-            status.textContent = '\u2713 ' + hex; status.className = 'pms-status found';
+            status.textContent = '✓ ' + hex; status.className = 'pms-status found';
             updateBrandingPreview();
         } else if (el.value.trim()) {
             swatch.style.background = '#ccc';
-            status.textContent = '\u2717 Code not found'; status.className = 'pms-status notfound';
+            status.textContent = '✗ Code not found'; status.className = 'pms-status notfound';
         } else {
             swatch.style.background = '#ccc';
             status.textContent = ''; status.className = 'pms-status';
@@ -461,8 +461,6 @@ function printParentSheet() {
         roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     } catch(e) {}
 
-    // Generate QR in admin page context (QRCode.js already loaded here).
-    // QRCode.js appends an <img> to the container — NOT a <canvas> — so we query img, not canvas.
     let qrDataUrl = '';
     const tmp = document.createElement('div');
     tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
@@ -518,6 +516,84 @@ ${qrHtml}
     win.document.close();
 }
 
+// ── Word Doc Export ───────────────────────────────────────────────
+function downloadWordDoc() {
+    const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
+    const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    const base = window.location.href.replace(/[^/]*$/, '');
+    let roomsUrl = base + 'rooms.html';
+    try {
+        const payload = {
+            t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
+            sn:s.schoolName||'', ev:s.sessionName||'',
+            p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
+            st:s.startTime||'', iv:s.interviewDuration||0,
+            bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
+            fb:localStorage.getItem('pti_firebase_url')||''
+        };
+        roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    } catch(e) {}
+
+    let qrDataUrl = '';
+    const tmp = document.createElement('div');
+    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+    document.body.appendChild(tmp);
+    try {
+        new QRCode(tmp, { text: roomsUrl, width: 220, height: 220, colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.L });
+        const imgEl = tmp.querySelector('img');
+        if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) qrDataUrl = imgEl.src;
+    } catch(e) {}
+    document.body.removeChild(tmp);
+
+    const primary    = s.primaryColour || '#003B5C';
+    const schoolName = s.schoolName || 'Student Progress Meetings';
+    const eventName  = s.sessionName || '';
+    const logoHtml   = s.logoDataUrl ? `<img src="${s.logoDataUrl}" style="height:55pt;display:block;margin:0 auto 8pt;" alt="">` : '';
+    const qrHtml     = qrDataUrl
+        ? `<img src="${qrDataUrl}" width="180" height="180" style="display:block;margin:0 auto;" alt="QR Code">`
+        : `<p style="color:#999;font-size:9pt;">QR unavailable — save settings first.</p>`;
+    const rows = sorted.map(t =>
+        `<tr><td style="padding:5pt 8pt;border-bottom:1pt solid #EEEEEE;font-size:10pt;">${esc(t.name||'')}</td>` +
+        `<td style="padding:5pt 8pt;border-bottom:1pt solid #EEEEEE;font-size:10pt;">${esc(t.subject||'')}</td>` +
+        `<td style="padding:5pt 8pt;border-bottom:1pt solid #EEEEEE;font-size:10pt;">${esc(t.room||'')}</td></tr>`
+    ).join('');
+
+    const html =
+`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'><title>${esc(schoolName)}</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+<style>@page{size:A4;margin:20mm;}body{font-family:Arial,sans-serif;color:#212121;}</style>
+</head><body>
+<div style="text-align:center;padding-bottom:12pt;margin-bottom:16pt;border-bottom:3pt solid ${primary};">
+  ${logoHtml}
+  <h1 style="font-size:20pt;font-weight:800;color:${primary};margin:0 0 4pt;">${esc(schoolName)}</h1>
+  ${eventName?`<p style="font-size:11pt;color:#616161;margin:0;">${esc(eventName)}</p>`:''}
+</div>
+<div style="text-align:center;margin-bottom:20pt;">
+  <p style="font-size:13pt;font-weight:bold;color:${primary};margin-bottom:10pt;">Scan for Live Timer &amp; Room Locations</p>
+  ${qrHtml}
+</div>
+<p style="font-size:11pt;font-weight:bold;color:${primary};margin-bottom:8pt;">Teacher Room Locations</p>
+<table style="width:100%;border-collapse:collapse;">
+<thead><tr>
+  <th style="background:${primary};color:white;padding:7pt 8pt;text-align:left;font-size:10pt;">Teacher Name</th>
+  <th style="background:${primary};color:white;padding:7pt 8pt;text-align:left;font-size:10pt;">Subject / Year Level</th>
+  <th style="background:${primary};color:white;padding:7pt 8pt;text-align:left;font-size:10pt;">Room</th>
+</tr></thead>
+<tbody>${rows||'<tr><td colspan="3" style="text-align:center;color:#9E9E9E;padding:10pt;font-style:italic;">No teachers entered.</td></tr>'}</tbody>
+</table>
+</body></html>`;
+
+    const blob = new Blob(['﻿' + html], { type: 'application/msword' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = (schoolName.replace(/[^\w\s]/g,'').trim()||'SPM') + '_Teacher_Directory.doc';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Word document downloaded.');
+}
+
 // ── Email Template ────────────────────────────────────────────────
 function showEmailTemplate() {
     const s     = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
@@ -552,7 +628,6 @@ Thank you for helping to make ${event} run smoothly.
 
 Kind regards,`;
 
-    // Show copyable link in modal
     const linkSection = document.getElementById('emailLinkSection');
     if (fbUrl) {
         document.getElementById('emailLinkText').value = link;
@@ -613,7 +688,6 @@ function init() {
     }
     renderSessionUI();
     document.getElementById('sessionNameInput').value=activeName||'';
-    // Load Firebase URL if previously saved
     const savedFbUrl = getFirebaseUrl();
     if (savedFbUrl) {
         document.getElementById('firebaseUrl').value = savedFbUrl;
