@@ -978,11 +978,7 @@ function init() {
     updateBrandingPreview(); updateTimingPreview();
     renderSessionUI();
     document.getElementById('sessionNameInput').value=getActiveName()||'';
-    const savedFbUrl = getFirebaseUrl();
-    if (savedFbUrl) {
-        document.getElementById('firebaseUrl').value = savedFbUrl;
-        generateTeacherQR(savedFbUrl);
-    }
+    generateTeacherQR(getFirebaseUrl());
 
     bindPMSInput('primaryPMS','primaryColour','primaryHex','primaryPMSStatus','primaryPMSSwatch');
     bindPMSInput('secondaryPMS','secondaryColour','secondaryHex','secondaryPMSStatus','secondaryPMSSwatch');

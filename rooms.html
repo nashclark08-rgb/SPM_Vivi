@@ -158,6 +158,26 @@
 <div class="footer"></div>
 
 <script>
+    // ── Server time sync ──────────────────────────────────────────────
+    // Anchor all timer math to Firebase's HTTP Date header so this phone
+    // agrees with display.html (and other phones) within ~500ms regardless
+    // of how far the local clock has drifted.
+    const DEFAULT_FIREBASE_URL = 'https://spmvivi-d8f6b-default-rtdb.firebaseio.com';
+    let _serverOffsetMs = 0;
+    async function _syncServerTime() {
+        try {
+            const t1 = Date.now();
+            const r = await fetch(DEFAULT_FIREBASE_URL + '/.json?shallow=true', { cache: 'no-store' });
+            const t2 = Date.now();
+            const h = r.headers.get('Date');
+            if (h) {
+                const serverMs = new Date(h).getTime();
+                _serverOffsetMs = (serverMs + (t2 - t1) / 2) - t2;
+            }
+        } catch (e) {}
+    }
+    function _now() { return Date.now() + _serverOffsetMs; }
+
     // ── Data loading ──────────────────────────────────────────────────
     function getQueryParam(name) {
         const m = window.location.search.match(new RegExp('[?&]' + name + '=([^&#]*)'));
@@ -218,7 +238,7 @@
     const SYNC_OFFSET_SECS = 0;
 
     function getTimerState(d) {
-        const now    = new Date();
+        const now    = new Date(_now());
         const start  = timeToDate(d.st);
         if (!start || !d.iv || !d.ni) return null;
         const ivSecs  = d.iv * 60;
@@ -307,6 +327,9 @@
 
     // ── Init ──────────────────────────────────────────────────────────
     async function init() {
+        await _syncServerTime();
+        setInterval(_syncServerTime, 60000);
+
         const d = (await getFirebaseData()) || getHashData() || fromStorage();
         if (!d) return;
 
@@ -334,8 +357,9 @@
             timerData = d;
             document.getElementById('timerBanner').style.display = 'block';
             tick();
-            // Align to same whole-second boundary as display.html so both show identical digits
-            setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (Date.now() % 1000));
+            // Align to SERVER whole-second boundary so this and display.html
+            // show identical digits regardless of local clock drift
+            setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (_now() % 1000));
         }
 
         // Online teachers (if Firebase URL is in payload)

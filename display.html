@@ -370,6 +370,26 @@
     }
     let teachersForQR = [], soundsConfig = {}, fbUrlOverride = '';
 
+    // ── Server time sync ──────────────────────────────────────────────
+    // Devices drift seconds apart -- phones especially, but also PCs that
+    // haven't NTP-synced recently, and Vivi-cast receivers. Anchor all
+    // timer math to Firebase's HTTP Date header so every screen agrees.
+    // Accuracy ~500ms (Date header has 1s resolution + we correct for RTT).
+    let _serverOffsetMs = 0;
+    async function _syncServerTime() {
+        try {
+            const t1 = Date.now();
+            const r = await fetch(DEFAULT_FIREBASE_URL + '/.json?shallow=true', { cache: 'no-store' });
+            const t2 = Date.now();
+            const h = r.headers.get('Date');
+            if (h) {
+                const serverMs = new Date(h).getTime();
+                _serverOffsetMs = (serverMs + (t2 - t1) / 2) - t2;
+            }
+        } catch (e) { /* keep previous offset */ }
+    }
+    function _now() { return Date.now() + _serverOffsetMs; }
+
     // Upload payload to Firebase and return a SHORT URL the rooms QR can
     // encode comfortably. Falls back to the long embedded-hash URL if
     // Firebase is unreachable.
@@ -523,7 +543,7 @@
 
     // ── State calculation ─────────────────────────────────────────────
     function getState(cfg) {
-        const now        = new Date();
+        const now        = new Date(_now());
         const start      = timeStrToDate(cfg.startTime);
         const ivSecs     = cfg.interviewDuration * 60;
         const brkSecs    = (cfg.breakDuration || 0) * 60;
@@ -636,6 +656,10 @@
         soundsConfig  = conf.sounds;
         fbUrlOverride = conf.firebaseUrl || DEFAULT_FIREBASE_URL;
 
+        // Sync clocks first so the timer agrees with other devices from tick 1
+        await _syncServerTime();
+        setInterval(_syncServerTime, 60000);
+
         // Apply branding
         if (cfg.primaryColour)   document.documentElement.style.setProperty('--primary', cfg.primaryColour);
         if (cfg.secondaryColour) {
@@ -669,9 +693,9 @@
         renderQrInto(document.getElementById('qrcode'), roomsUrl, 180);
 
         tick();
-        // Align to the next whole-second boundary so this display and
-        // the rooms.html phone timer always show the same digit simultaneously
-        setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (Date.now() % 1000));
+        // Align to the next whole-second boundary on SERVER time so this
+        // display and the rooms.html phone timer always show the same digit
+        setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (_now() % 1000));
 
         // Online teachers (if Firebase configured)
         pollOnline();
