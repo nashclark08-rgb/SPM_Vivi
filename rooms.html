@@ -152,13 +152,32 @@
 
 <div class="content">
     <p class="page-title" id="pageTitle">Teacher Locations</p>
-    <div id="tableContainer"></div>
+    <div id="tableContainer"><div class="empty"><p>Loading&hellip;</p></div></div>
 </div>
 
 <div class="footer"></div>
 
 <script>
     // ── Data loading ──────────────────────────────────────────────────
+    function getQueryParam(name) {
+        const m = window.location.search.match(new RegExp('[?&]' + name + '=([^&#]*)'));
+        return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+    }
+
+    // New short-URL format: ?r=<firebase-id>&fb=<firebase-url>
+    // Returns null if no ?r param, or if fetch fails (caller falls back to hash/localStorage)
+    async function getFirebaseData() {
+        const id = getQueryParam('r');
+        const fb = getQueryParam('fb');
+        if (!id || !fb) return null;
+        try {
+            const r = await fetch(fb.replace(/\/$/, '') + '/pti-rooms/' + encodeURIComponent(id) + '.json');
+            if (!r.ok) return null;
+            const obj = await r.json();
+            return obj && obj.data ? obj.data : null;
+        } catch (e) { return null; }
+    }
+
     function getHashData() {
         const h = window.location.hash.slice(1);
         if (!h) return null;
@@ -287,8 +306,8 @@
     function hideOnline() { document.getElementById('onlineBanner').style.display = 'none'; }
 
     // ── Init ──────────────────────────────────────────────────────────
-    function init() {
-        const d = getHashData() || fromStorage();
+    async function init() {
+        const d = (await getFirebaseData()) || getHashData() || fromStorage();
         if (!d) return;
 
         // Branding

@@ -527,6 +527,31 @@ function getQrImageHTML(text, size) {
     const src = dataUrl || _qrServerUrl(text, size);
     return `<img src="${src}" width="${size}" height="${size}" alt="QR Code" style="display:block;margin:0 auto;">`;
 }
+// Builds the rooms URL embedded in the print/Word QR.
+// If Firebase is configured, uploads the payload and returns a SHORT
+// `rooms.html?r=<id>&fb=<url>` (small QR, easy to scan).
+// Otherwise falls back to a long `rooms.html#<base64>` (dense QR, may not scan).
+async function buildShortRoomsUrl(base, payload, fbUrl) {
+    if (fbUrl) {
+        try {
+            const r = await fetch(fbUrl + '/pti-rooms.json', {
+                method: 'POST',
+                body: JSON.stringify({ data: payload, createdAt: Date.now() })
+            });
+            if (r.ok) {
+                const j = await r.json();
+                if (j && j.name) {
+                    return base + 'rooms.html?r=' + encodeURIComponent(j.name) +
+                                  '&fb=' + encodeURIComponent(fbUrl);
+                }
+            }
+        } catch (e) {}
+    }
+    try {
+        return base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    } catch (e) { return base + 'rooms.html'; }
+}
+
 async function getQrDataUrl(text, size) {
     const dataUrl = _qrCodeJsDataUrl(text, size);
     if (dataUrl) return dataUrl;
@@ -544,30 +569,38 @@ async function getQrDataUrl(text, size) {
 }
 
 // ── Print A4 Parent Sheet ─────────────────────────────────────────
-function printParentSheet() {
+async function printParentSheet() {
+    // Open window synchronously so popup blockers don't fire after the await
+    const win = window.open('', '_blank');
+    if (!win) { toast('Popup blocked — please allow popups for this site and try again.'); return; }
+    win.document.write('<!DOCTYPE html><html><head><title>Preparing print sheet…</title><style>body{font-family:sans-serif;padding:3rem;color:#666;text-align:center}</style></head><body><p>Preparing print sheet…</p></body></html>');
+
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
     const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     const base = window.location.href.replace(/[^/]*$/, '');
-    let roomsUrl = base + 'rooms.html';
-    try {
-        const payload = {
-            t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
-            sn:s.schoolName||'', ev:s.sessionName||'',
-            p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
-            st:s.startTime||'', iv:s.interviewDuration||0,
-            bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
-            fb:localStorage.getItem('pti_firebase_url')||''
-        };
-        roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    } catch(e) {}
+    const fbUrl = (localStorage.getItem('pti_firebase_url') || '').replace(/\/$/, '');
 
-    const qrHtml = getQrImageHTML(roomsUrl, 280);
+    const payload = {
+        t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
+        sn:s.schoolName||'', ev:s.sessionName||'',
+        p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
+        st:s.startTime||'', iv:s.interviewDuration||0,
+        bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
+        fb: fbUrl
+    };
+
+    if (!fbUrl && sorted.length > 20) {
+        toast('Tip: configure Firebase (section 6) so the QR stays scannable — without it, ' + sorted.length + ' teachers may produce a QR too dense for phones.');
+    }
+
+    const roomsUrl = await buildShortRoomsUrl(base, payload, fbUrl);
+    const qrHtml = getQrImageHTML(roomsUrl, 360);
 
     const primary = s.primaryColour || '#003B5C';
     const eventName = s.sessionName || s.schoolName || 'Parent Teacher Interviews';
     const rows = sorted.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.subject)}</td><td>${esc(t.room)}</td></tr>`).join('');
 
-    const win = window.open('', '_blank');
+    win.document.open();
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PTI Parent Sheet</title><style>
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{size:A4;margin:16mm;}
@@ -596,7 +629,12 @@ ${qrHtml}
 <div class="tbl-hdr">Teacher Room Locations</div>
 <table><thead><tr><th>Teacher Name</th><th>Subject / Year Level</th><th>Room</th></tr></thead>
 <tbody>${rows||'<tr><td colspan="3" style="text-align:center;color:#9E9E9E;font-style:italic;padding:14px">No teachers entered.</td></tr>'}</tbody></table>
-<script>window.onload=function(){window.print();};<\/script>
+<script>
+(function(){function p(){try{window.print();}catch(e){}}
+if(document.readyState==='complete'){setTimeout(p,300);}
+else{window.addEventListener('load',function(){setTimeout(p,300);});}}
+)();
+<\/script>
 </body></html>`);
     win.document.close();
 }
@@ -606,27 +644,30 @@ async function downloadWordDoc() {
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
     const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     const base = window.location.href.replace(/[^/]*$/, '');
-    let roomsUrl = base + 'rooms.html';
-    try {
-        const payload = {
-            t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
-            sn:s.schoolName||'', ev:s.sessionName||'',
-            p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
-            st:s.startTime||'', iv:s.interviewDuration||0,
-            bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
-            fb:localStorage.getItem('pti_firebase_url')||''
-        };
-        roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    } catch(e) {}
+    const fbUrl = (localStorage.getItem('pti_firebase_url') || '').replace(/\/$/, '');
 
-    const qrDataUrl = await getQrDataUrl(roomsUrl, 220);
+    const payload = {
+        t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
+        sn:s.schoolName||'', ev:s.sessionName||'',
+        p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
+        st:s.startTime||'', iv:s.interviewDuration||0,
+        bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
+        fb: fbUrl
+    };
+
+    if (!fbUrl && sorted.length > 20) {
+        toast('Tip: configure Firebase (section 6) so the QR stays scannable — without it, ' + sorted.length + ' teachers may produce a QR too dense for phones.');
+    }
+
+    const roomsUrl = await buildShortRoomsUrl(base, payload, fbUrl);
+    const qrDataUrl = await getQrDataUrl(roomsUrl, 280);
 
     const primary    = s.primaryColour || '#003B5C';
     const schoolName = s.schoolName || 'Student Progress Meetings';
     const eventName  = s.sessionName || '';
     const logoHtml   = s.logoDataUrl ? `<img src="${s.logoDataUrl}" style="height:55pt;display:block;margin:0 auto 8pt;" alt="">` : '';
     const qrHtml     = qrDataUrl
-        ? `<img src="${qrDataUrl}" width="180" height="180" style="display:block;margin:0 auto;" alt="QR Code">`
+        ? `<img src="${qrDataUrl}" width="220" height="220" style="display:block;margin:0 auto;" alt="QR Code">`
         : `<p style="color:#999;font-size:9pt;">QR unavailable — both qrcodejs and the fallback generator failed (check internet).</p>`;
     const rows = sorted.map(t =>
         `<tr><td style="padding:5pt 8pt;border-bottom:1pt solid #EEEEEE;font-size:10pt;">${esc(t.name||'')}</td>` +
