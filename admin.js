@@ -71,7 +71,7 @@ function bindPMSInput(inputId, colourId, hexDisplayId, statusId, swatchId) {
             document.getElementById(hexDisplayId).textContent = hex;
             swatch.style.background = hex;
             status.textContent = '✓ ' + hex; status.className = 'pms-status found';
-            updateBrandingPreview();
+            updateBrandingPreview(); autosave();
         } else if (el.value.trim()) {
             swatch.style.background = '#ccc';
             status.textContent = '✗ Code not found'; status.className = 'pms-status notfound';
@@ -95,7 +95,7 @@ function bindHexInput(inputId, colourId, hexDisplayId, swatchId) {
             document.getElementById(colourId).value = hex;
             document.getElementById(hexDisplayId).textContent = hex;
             swatch.style.background = hex;
-            updateBrandingPreview();
+            updateBrandingPreview(); autosave();
         } else {
             swatch.style.background = '#ccc';
         }
@@ -187,6 +187,52 @@ function deleteSelectedSession() {
     if (getActiveName()===name) localStorage.removeItem(KEYS.active);
     renderSessionUI(); toast(`Session "${name}" deleted.`);
 }
+function exportSelectedSession() {
+    const name = document.getElementById('sessionSelect').value;
+    if (!name) { toast('Select a session to export.'); return; }
+    const payload = getAllSessions()[name];
+    if (!payload) { toast('Session not found.'); return; }
+    const file = { format: 'spm-vivi-session', version: 1, name, exportedAt: new Date().toISOString(), payload };
+    const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') + '.spm-vivi.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(`Exported "${name}".`);
+}
+
+function importSession(ev) {
+    const file = ev.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        let data;
+        try { data = JSON.parse(e.target.result); }
+        catch { toast('That file is not valid JSON.'); ev.target.value = ''; return; }
+        if (data.format !== 'spm-vivi-session' || !data.payload) {
+            toast('That file is not an SPM_Vivi session export.'); ev.target.value = ''; return;
+        }
+        let name = (data.name || 'Imported session').trim() || 'Imported session';
+        const sessions = getAllSessions();
+        if (sessions[name]) {
+            const overwrite = confirm(`A session called "${name}" already exists.\n\nOK = overwrite it\nCancel = save as a new copy`);
+            if (!overwrite) {
+                let i = 2;
+                while (sessions[`${name} (${i})`]) i++;
+                name = `${name} (${i})`;
+            }
+        }
+        sessions[name] = data.payload;
+        localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
+        renderSessionUI();
+        document.getElementById('sessionSelect').value = name;
+        toast(`Imported "${name}". Click Load to apply it.`);
+        ev.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
 function applyPayload(s) {
     if (s.settings) applySettings(s.settings);
     teacherRows = s.teachers||[];
@@ -213,6 +259,9 @@ function persist() {
     localStorage.setItem(KEYS.teachers,  JSON.stringify(teacherRows));
     localStorage.setItem(KEYS.sounds,    JSON.stringify(collectSounds()));
 }
+
+let autosaveTimer;
+function autosave() { clearTimeout(autosaveTimer); autosaveTimer = setTimeout(persist, 400); }
 
 function toMins(t) { const [h,m]=t.split(':').map(Number); return h*60+m; }
 function minsTo12h(mins) {
@@ -274,7 +323,7 @@ function renderTable() {
         function makeInput(val, placeholder, field) {
             const inp = document.createElement('input');
             inp.type = 'text'; inp.value = val||''; inp.placeholder = placeholder;
-            inp.addEventListener('input', function() { updateTeacher(i, field, this.value); });
+            inp.addEventListener('input', function() { updateTeacher(i, field, this.value); autosave(); });
             return inp;
         }
 
@@ -293,8 +342,8 @@ function renderTable() {
 }
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function addRow(data){ teacherRows.push(data||{name:'',subject:'',room:''}); renderTable(); const inputs=document.querySelectorAll('#teacherBody tr:last-child input'); if(inputs.length&&!data) inputs[0].focus(); }
-function removeRow(i){ teacherRows.splice(i,1); renderTable(); }
+function addRow(data){ teacherRows.push(data||{name:'',subject:'',room:''}); renderTable(); autosave(); const inputs=document.querySelectorAll('#teacherBody tr:last-child input'); if(inputs.length&&!data) inputs[0].focus(); }
+function removeRow(i){ teacherRows.splice(i,1); renderTable(); autosave(); }
 
 // ── CSV Template & Upload ─────────────────────────────────────────
 function downloadCSVTemplate() {
@@ -330,7 +379,7 @@ function uploadCSV(e) {
         }).filter(r => r.name || r.subject || r.room);
         if (!rows.length) { toast('No teacher data found in CSV.'); e.target.value = ''; return; }
         rows.forEach(r => teacherRows.push(r));
-        renderTable();
+        renderTable(); autosave();
         toast(`Imported ${rows.length} teacher(s) from CSV.`);
         e.target.value = '';
     };
@@ -402,6 +451,7 @@ document.getElementById('schoolLogo').addEventListener('change',function(){
         logoDataUrl=e.target.result;
         document.getElementById('logoPreviewWrap').innerHTML=`<img src="${logoDataUrl}" alt="Logo preview">`;
         const pl=document.getElementById('previewLogo'); pl.src=logoDataUrl; pl.style.display='block';
+        autosave();
     };
     reader.readAsDataURL(file);
 });
@@ -477,10 +527,10 @@ function printParentSheet() {
 
     const primary = s.primaryColour || '#003B5C';
     const eventName = s.sessionName || s.schoolName || 'Parent Teacher Interviews';
-    const rows = sorted.map(t=>`<tr><td>${t.name||''}</td><td>${t.subject||''}</td><td>${t.room||''}</td></tr>`).join('');
+    const rows = sorted.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.subject)}</td><td>${esc(t.room)}</td></tr>`).join('');
     const qrHtml = qrDataUrl
         ? `<img src="${qrDataUrl}" width="280" height="280" alt="QR Code" style="display:block;margin:0 auto;">`
-        : `<p style="font-size:11px;color:#999;">Scan: ${roomsUrl}</p>`;
+        : `<p style="font-size:11px;color:#999;">Scan: ${esc(roomsUrl)}</p>`;
 
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PTI Parent Sheet</title><style>
@@ -501,8 +551,8 @@ tr:nth-child(even) td{background:#FAFAFA;}
 </style></head><body>
 <div class="hdr">
 ${s.logoDataUrl?`<img class="logo" src="${s.logoDataUrl}" alt="">`:''}
-<div class="school">${s.schoolName||'Parent Teacher Interviews'}</div>
-${eventName!==s.schoolName?`<div class="event">${eventName}</div>`:''}
+<div class="school">${esc(s.schoolName||'Parent Teacher Interviews')}</div>
+${eventName!==s.schoolName?`<div class="event">${esc(eventName)}</div>`:''}
 </div>
 <div class="qr-section">
 <div class="qr-title">&#128247; Scan for Live Timer &amp; Room Locations</div>
@@ -661,10 +711,50 @@ function copyEmailText() {
 }
 
 function saveAndLaunch(){ if(!validate()) return; persist(); window.open('display.html','_blank'); }
+
+function buildDisplayUrl() {
+    persist();
+    const s = collectSettings();
+    const payload = {
+        sn: s.schoolName    || '',
+        ev: '',
+        p:  s.primaryColour   || '#003B5C',
+        sc: s.secondaryColour || '#FFFFFF',
+        lg: s.logoDataUrl   || '',
+        st: s.startTime          || '',
+        iv: s.interviewDuration  || 0,
+        bk: s.breakDuration      || 0,
+        ni: s.numberOfInterviews || 0,
+        t:  teacherRows.map(t => ({ n: t.name||'', s: t.subject||'', r: t.room||'' })),
+        so: collectSounds(),
+        fb: localStorage.getItem('pti_firebase_url') || ''
+    };
+    const base = window.location.href.replace(/[^/]*$/, '');
+    return base + 'display.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+
+function copyDisplayUrl() {
+    if (!validate()) return;
+    const url = buildDisplayUrl();
+    if (url.length > 30000 && !confirm(`This URL is ${url.length.toLocaleString()} characters long, which may exceed some browser limits. A large school logo is the usual cause. Continue?`)) return;
+    const done = () => toast('Display URL copied. Paste into a browser on any other PC/projector to launch a mirrored display.');
+    const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch(e) { toast('Copy failed — URL logged to console.'); console.log(url); }
+        document.body.removeChild(ta);
+    };
+    try { navigator.clipboard.writeText(url).then(done).catch(fallback); }
+    catch (e) { fallback(); }
+}
 function previewRooms(){ persist(); window.open('rooms.html','_blank'); }
 function resetAll(){
-    if(!confirm('Reset all settings? This cannot be undone.')) return;
-    Object.values(KEYS).forEach(k=>localStorage.removeItem(k));
+    if(!confirm('Reset the current form? Your saved sessions will NOT be affected.')) return;
+    localStorage.removeItem(KEYS.settings);
+    localStorage.removeItem(KEYS.teachers);
+    localStorage.removeItem(KEYS.sounds);
+    localStorage.removeItem(KEYS.active);
     location.reload();
 }
 
@@ -676,18 +766,13 @@ function toast(msg){
 }
 
 function init() {
-    const activeName=getActiveName(), sessions=getAllSessions();
-    if(activeName && sessions[activeName]) {
-        applyPayload(sessions[activeName]);
-    } else {
-        applySettings(loadData(KEYS.settings,{}));
-        teacherRows=loadData(KEYS.teachers,[]);
-        applySounds(loadData(KEYS.sounds,{}));
-        renderTable();
-        updateBrandingPreview(); updateTimingPreview();
-    }
+    applySettings(loadData(KEYS.settings,{}));
+    teacherRows=loadData(KEYS.teachers,[]);
+    applySounds(loadData(KEYS.sounds,{}));
+    renderTable();
+    updateBrandingPreview(); updateTimingPreview();
     renderSessionUI();
-    document.getElementById('sessionNameInput').value=activeName||'';
+    document.getElementById('sessionNameInput').value=getActiveName()||'';
     const savedFbUrl = getFirebaseUrl();
     if (savedFbUrl) {
         document.getElementById('firebaseUrl').value = savedFbUrl;
@@ -698,17 +783,19 @@ function init() {
     bindPMSInput('secondaryPMS','secondaryColour','secondaryHex','secondaryPMSStatus','secondaryPMSSwatch');
     bindHexInput('primaryHEX','primaryColour','primaryHex','primaryHEXSwatch');
     bindHexInput('secondaryHEX','secondaryColour','secondaryHex','secondaryHEXSwatch');
-    document.getElementById('schoolName').addEventListener('input',updateBrandingPreview);
+    document.getElementById('schoolName').addEventListener('input', function(){ updateBrandingPreview(); autosave(); });
     document.getElementById('primaryColour').addEventListener('input', function() {
         document.getElementById('primaryHex').textContent = this.value;
-        updateBrandingPreview();
+        updateBrandingPreview(); autosave();
     });
     document.getElementById('secondaryColour').addEventListener('input', function() {
         document.getElementById('secondaryHex').textContent = this.value;
-        updateBrandingPreview();
+        updateBrandingPreview(); autosave();
     });
     ['startTime','finishTime','interviewDuration','breakDuration'].forEach(id=>
-        document.getElementById(id).addEventListener('input',updateTimingPreview));
+        document.getElementById(id).addEventListener('input', function(){ updateTimingPreview(); autosave(); }));
+    document.getElementById('soundEndInterview').addEventListener('change', autosave);
+    document.getElementById('soundEndBreak').addEventListener('change', autosave);
 }
 
 init();

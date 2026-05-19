@@ -279,9 +279,45 @@
 
     <script>
     // ── Storage ───────────────────────────────────────────────────────
-    function loadSettings() {
-        try { return JSON.parse(localStorage.getItem('pti_settings')) || {}; } catch { return {}; }
+    // Display can be launched two ways:
+    //   1. From admin on the same PC -- reads localStorage
+    //   2. From a copied URL with #<base64-payload> -- used to mirror the
+    //      display on other PCs/projectors that have no local config
+    function loadConfig() {
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+            try {
+                const d = JSON.parse(decodeURIComponent(escape(atob(hash))));
+                return {
+                    cfg: {
+                        schoolName:         d.sn || '',
+                        sessionName:        d.ev || '',
+                        primaryColour:      d.p  || '#003B5C',
+                        secondaryColour:    d.sc || '#FFFFFF',
+                        logoDataUrl:        d.lg || '',
+                        startTime:          d.st || '',
+                        interviewDuration:  d.iv || 0,
+                        breakDuration:      d.bk || 0,
+                        numberOfInterviews: d.ni || 0
+                    },
+                    teachers:    d.t  || [],
+                    sounds:      d.so || {},
+                    firebaseUrl: d.fb || ''
+                };
+            } catch (e) { /* fall through to localStorage */ }
+        }
+        let cfgLocal = {}, teachers = [], sounds = {};
+        try { cfgLocal = JSON.parse(localStorage.getItem('pti_settings')) || {}; } catch {}
+        try { teachers = JSON.parse(localStorage.getItem('pti_teachers')) || []; } catch {}
+        try { sounds   = JSON.parse(localStorage.getItem('pti_sounds'))   || {}; } catch {}
+        return {
+            cfg: cfgLocal,
+            teachers,
+            sounds,
+            firebaseUrl: localStorage.getItem('pti_firebase_url') || ''
+        };
     }
+    let teachersForQR = [], soundsConfig = {}, fbUrlOverride = '';
 
     // ── Helpers ───────────────────────────────────────────────────────
     function pad(n) { return String(Math.max(0, Math.floor(n))).padStart(2, '0'); }
@@ -326,9 +362,7 @@
         'Low Gong':         c => { _tone(c,'sine',110,0.6,0,1.5); _tone(c,'sine',220,0.25,0,0.8); },
         'High Ping':        c => { _tone(c,'sine',2093,0.45,0,0.2); }
     };
-    function _loadSounds() {
-        try { return JSON.parse(localStorage.getItem('pti_sounds')) || {}; } catch { return {}; }
-    }
+    function _loadSounds() { return soundsConfig; }
     function _playSound(name) {
         const fn = SOUND_DEFS[name] || SOUND_DEFS['Descending Chime'];
         try { const ctx = new (window.AudioContext||window.webkitAudioContext)(); fn(ctx); }
@@ -452,7 +486,11 @@
 
     // ── Init ──────────────────────────────────────────────────────────
     function init() {
-        cfg = loadSettings();
+        const conf = loadConfig();
+        cfg           = conf.cfg;
+        teachersForQR = conf.teachers;
+        soundsConfig  = conf.sounds;
+        fbUrlOverride = conf.firebaseUrl;
 
         // Apply branding
         if (cfg.primaryColour)   document.documentElement.style.setProperty('--primary', cfg.primaryColour);
@@ -473,9 +511,8 @@
         const base = window.location.href.replace(/[^/]*$/, '');
         let roomsUrl = base + 'rooms.html';
         try {
-            const teachers = JSON.parse(localStorage.getItem('pti_teachers') || '[]');
             const payload = {
-                t:  teachers.map(t => ({ n: t.name || '', s: t.subject || '', r: t.room || '' })),
+                t:  teachersForQR.map(t => ({ n: t.name || '', s: t.subject || '', r: t.room || '' })),
                 sn: cfg.schoolName    || '',
                 ev: cfg.sessionName   || '',
                 p:  cfg.primaryColour   || '#003B5C',
@@ -484,7 +521,7 @@
                 iv: cfg.interviewDuration  || 0,
                 bk: cfg.breakDuration      || 0,
                 ni: cfg.numberOfInterviews || 0,
-                fb: localStorage.getItem('pti_firebase_url') || ''
+                fb: fbUrlOverride || ''
             };
             const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
             roomsUrl = base + 'rooms.html#' + encoded;
@@ -537,7 +574,7 @@
     document.addEventListener('touchstart', _bumpFs, { passive: true });
 
     // ── Online Teachers (Firebase Realtime DB REST poll) ──────────
-    function _fbUrl() { return (localStorage.getItem('pti_firebase_url') || '').replace(/\/$/, ''); }
+    function _fbUrl() { return (fbUrlOverride || '').replace(/\/$/, ''); }
 
     function pollOnline() {
         const url = _fbUrl(); if (!url) return;
