@@ -157,18 +157,39 @@
 </div>
 
 <script>
-// ── URL params ───────────────────────────────────────────────────
+// ── URL params (fallback) ────────────────────────────────────────
+// Timing values come from Firebase /pti-active-config on each load so
+// the email link is "evergreen" -- changing admin settings updates what
+// teachers see, even after the email is sent. URL params are kept as a
+// fallback for backward compatibility with links sent before that path
+// existed.
 const params  = new URLSearchParams(window.location.search);
 const DB_URL  = decodeURIComponent(params.get('db') || '').replace(/\/$/, '');
-const IV_MINS = Math.max(1, parseInt(params.get('iv') || '10'));
-const BK_MINS = Math.max(0, parseInt(params.get('bk') || '0'));
-const NI      = parseInt(params.get('ni') || '0');
-const ST      = params.get('st') || '';
-const SN      = decodeURIComponent(params.get('sn') || 'Student Progress Meetings');
-const EV      = decodeURIComponent(params.get('ev') || '');
+let IV_MINS = Math.max(1, parseInt(params.get('iv') || '10'));
+let BK_MINS = Math.max(0, parseInt(params.get('bk') || '0'));
+let NI      = parseInt(params.get('ni') || '0');
+let ST      = params.get('st') || '';
+let SN      = decodeURIComponent(params.get('sn') || 'Student Progress Meetings');
+let EV      = decodeURIComponent(params.get('ev') || '');
 
-document.getElementById('hdrTitle').textContent = SN;
-document.getElementById('hdrSub').textContent   = EV || 'Online Meeting Schedule';
+let slots = [];
+const CIRC  = 2 * Math.PI * 70;
+
+async function loadActiveConfig() {
+    if (!DB_URL) return;
+    try {
+        const r = await fetch(DB_URL + '/pti-active-config.json', { cache: 'no-store' });
+        if (!r.ok) return;
+        const cfg = await r.json();
+        if (!cfg) return;
+        if (cfg.st)                       ST      = cfg.st;
+        if (cfg.iv)                       IV_MINS = Math.max(1, parseInt(cfg.iv));
+        if (typeof cfg.bk === 'number')   BK_MINS = Math.max(0, cfg.bk);
+        if (cfg.ni)                       NI      = parseInt(cfg.ni);
+        if (cfg.sn)                       SN      = cfg.sn;
+        if (cfg.ev !== undefined)         EV      = cfg.ev;
+    } catch (e) { /* fall back to URL params */ }
+}
 
 // ── Compute interview slots ──────────────────────────────────────
 function computeSlots() {
@@ -191,28 +212,34 @@ function fmt12h(d) {
     return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
 }
 
-const slots = computeSlots();
-const CIRC  = 2 * Math.PI * 70;
-
-// ── Build UI based on mode ───────────────────────────────────────
-if (slots.length) {
-    document.getElementById('slotSection').style.display = 'block';
-    const now = Date.now();
-    document.getElementById('slotList').innerHTML = slots.map((s, i) => {
-        const past = s.until.getTime() < now;
-        return `<label class="slot-item${past ? ' past' : ''}">
-            <input type="checkbox" class="slot-check" value="${i}"${past ? ' disabled' : ''}>
-            <span class="slot-num">Slot ${s.idx}</span>
-            <span class="slot-time">${fmt12h(s.from)} &ndash; ${fmt12h(s.until)}</span>
-            ${past ? '<span class="slot-past-tag">passed</span>' : ''}
-        </label>`;
-    }).join('');
-} else {
-    document.getElementById('setupTitle').textContent = 'Online Meeting Check-In';
-    document.getElementById('setupDesc').textContent  =
-        'Enter your name below, then press the button when you start an online interview. Your name will appear on the main display screen until your interview time ends.';
-    document.getElementById('submitBtn').innerHTML    = '&#128250; Start Online Meeting';
+function buildUI() {
+    document.getElementById('hdrTitle').textContent = SN;
+    document.getElementById('hdrSub').textContent   = EV || 'Online Meeting Schedule';
+    slots = computeSlots();
+    if (slots.length) {
+        document.getElementById('slotSection').style.display = 'block';
+        const now = Date.now();
+        document.getElementById('slotList').innerHTML = slots.map((s, i) => {
+            const past = s.until.getTime() < now;
+            return `<label class="slot-item${past ? ' past' : ''}">
+                <input type="checkbox" class="slot-check" value="${i}"${past ? ' disabled' : ''}>
+                <span class="slot-num">Slot ${s.idx}</span>
+                <span class="slot-time">${fmt12h(s.from)} &ndash; ${fmt12h(s.until)}</span>
+                ${past ? '<span class="slot-past-tag">passed</span>' : ''}
+            </label>`;
+        }).join('');
+    } else {
+        document.getElementById('setupTitle').textContent = 'Online Meeting Check-In';
+        document.getElementById('setupDesc').textContent  =
+            'Enter your name below, then press the button when you start an online interview. Your name will appear on the main display screen until your interview time ends.';
+        document.getElementById('submitBtn').innerHTML    = '&#128250; Start Online Meeting';
+    }
 }
+
+(async function init() {
+    await loadActiveConfig();
+    buildUI();
+})();
 
 function selectAll(on) {
     document.querySelectorAll('.slot-check:not([disabled])').forEach(c => c.checked = on);

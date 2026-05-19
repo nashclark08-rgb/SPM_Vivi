@@ -225,6 +225,31 @@ async function syncSessionsFromFirebase() {
     } catch (e) { return false; }
 }
 
+// Push the CURRENT live config (timings, school name, session name) to
+// Firebase under /pti-active-config. teacher.html fetches this on every
+// load so the email link always reflects the latest timings -- previously
+// timings were baked into the URL at email-generation time and went stale.
+async function uploadActiveConfigToFirebase() {
+    const fb = getFirebaseUrl();
+    if (!fb) return false;
+    const s = collectSettings();
+    const config = {
+        st: s.startTime          || '',
+        iv: s.interviewDuration  || 0,
+        bk: s.breakDuration      || 0,
+        ni: s.numberOfInterviews || 0,
+        sn: s.schoolName         || 'Student Progress Meetings',
+        ev: getActiveName()      || '',
+        updatedAt: Date.now()
+    };
+    try {
+        const r = await fetch(fb + '/pti-active-config.json', {
+            method: 'PUT', body: JSON.stringify(config)
+        });
+        return r.ok;
+    } catch (e) { return false; }
+}
+
 // Full replace: drops local-only sessions and adopts whatever Firebase says.
 // Use this to propagate deletes from other devices.
 async function refreshSessionsFromCloud() {
@@ -253,8 +278,9 @@ async function saveSession() {
     localStorage.setItem(KEYS.active, name);
     persist(); renderSessionUI();
     const synced = await uploadSessionToFirebase(name, payload);
+    await uploadActiveConfigToFirebase();
     toast(synced
-        ? `Session "${name}" saved (available on all devices).`
+        ? `Session "${name}" saved (available on all devices, teacher links updated).`
         : `Session "${name}" saved locally only — cloud sync failed.`);
 }
 async function updateSession() {
@@ -265,17 +291,20 @@ async function updateSession() {
     localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
     persist();
     const synced = await uploadSessionToFirebase(name, payload);
+    await uploadActiveConfigToFirebase();
     toast(synced
-        ? `Session "${name}" updated (available on all devices).`
+        ? `Session "${name}" updated (available on all devices, teacher links updated).`
         : `Session "${name}" updated locally only — cloud sync failed.`);
 }
-function loadSelectedSession() {
+async function loadSelectedSession() {
     const name = document.getElementById('sessionSelect').value;
     if (!name) { toast('Select a session to load.'); return; }
     const s = getAllSessions()[name]; if (!s) { toast('Session not found.'); return; }
     applyPayload(s); localStorage.setItem(KEYS.active, name);
     document.getElementById('sessionNameInput').value = name;
-    persist(); renderSessionUI(); toast(`Session "${name}" loaded.`);
+    persist(); renderSessionUI();
+    await uploadActiveConfigToFirebase();
+    toast(`Session "${name}" loaded — teacher links now point at its timings.`);
 }
 async function deleteSelectedSession() {
     const name = document.getElementById('sessionSelect').value;
@@ -912,8 +941,9 @@ async function saveAndLaunch() {
     window.open('display.html', '_blank');
     // Push to Firebase in background, toast the result
     const synced = await uploadSessionToFirebase(name, payload);
+    await uploadActiveConfigToFirebase();
     toast(synced
-        ? `Session "${name}" saved (available on all devices). Display launched.`
+        ? `Session "${name}" saved (available on all devices, teacher links updated). Display launched.`
         : `Session "${name}" saved locally only — cloud sync failed. Display launched.`);
 }
 
