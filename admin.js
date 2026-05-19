@@ -892,7 +892,30 @@ function copyEmailText() {
     } catch(e) { document.execCommand('copy'); toast('Copied to clipboard!'); }
 }
 
-function saveAndLaunch(){ if(!validate()) return; persist(); window.open('display.html','_blank'); }
+async function saveAndLaunch() {
+    if (!validate()) return;
+    const name = document.getElementById('sessionNameInput').value.trim();
+    if (!name) {
+        // No session name — preserve existing behaviour: just persist + launch
+        persist();
+        window.open('display.html', '_blank');
+        return;
+    }
+    // Save sync to localStorage immediately so display.html sees latest state
+    const payload = buildPayload();
+    const sessions = getAllSessions(); sessions[name] = payload;
+    localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
+    localStorage.setItem(KEYS.active, name);
+    persist();
+    renderSessionUI();
+    // Open display window synchronously to avoid popup blockers firing after the await
+    window.open('display.html', '_blank');
+    // Push to Firebase in background, toast the result
+    const synced = await uploadSessionToFirebase(name, payload);
+    toast(synced
+        ? `Session "${name}" saved (available on all devices). Display launched.`
+        : `Session "${name}" saved locally only — cloud sync failed. Display launched.`);
+}
 
 function buildDisplayUrl() {
     persist();
