@@ -601,12 +601,13 @@
             <button class="btn btn-danger btn-sm" style="align-self:end" onclick="deleteSelectedSession()">&#128465; Delete</button>
         </div>
         <div style="display:flex;gap:0.5rem;margin-top:0.7rem;flex-wrap:wrap;align-items:center;">
-            <button class="btn btn-secondary btn-sm" onclick="exportSelectedSession()" title="Download the selected session as a .json file to back up or transfer to another device">&#11123; Export Session</button>
+            <button class="btn btn-secondary btn-sm" onclick="refreshSessionsFromCloud()" title="Pull the latest session list from the cloud. Use after another device has made changes (including deletions)">&#8635; Refresh from cloud</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportSelectedSession()" title="Download the selected session as a .json file (backup, or use offline)">&#11123; Export Session</button>
             <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0" title="Load a session from a .json file exported elsewhere">
                 &#128228; Import Session
                 <input type="file" id="sessionImport" accept=".json,application/json" style="display:none" onchange="importSession(event)">
             </label>
-            <span style="font-size:0.78rem;color:var(--text-muted);">Use to back up or move sessions between devices.</span>
+            <span style="font-size:0.78rem;color:var(--text-muted);">Sessions sync across all devices automatically.</span>
         </div>
         <div class="session-status">Active: <span class="session-badge" id="sessionBadge">Unsaved</span></div>
     </section>

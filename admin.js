@@ -157,24 +157,117 @@ let teacherRows = [], logoDataUrl = '';
 function getAllSessions() { try { return JSON.parse(localStorage.getItem(KEYS.sessions))||{}; } catch { return {}; } }
 function getActiveName()  { return localStorage.getItem(KEYS.active)||''; }
 
+// ── Firebase-backed session sync ──────────────────────────────────
+// Sessions are mirrored to Firebase so they're visible on every device
+// that uses the same Firebase URL. Local writes happen first (fast UI),
+// then push to Firebase in the background. Reads pull Firebase contents
+// into localStorage on page load and every 30s.
+const FB_SESSIONS_PATH = '/pti-sessions';
+
+// Firebase keys can't contain . # $ / [ ] -- encodeURIComponent handles
+// most of those, but . must be escaped manually.
+function sessionKey(name) {
+    return encodeURIComponent(name).replace(/\./g, '%2E');
+}
+
+async function fetchSessionsFromFirebase() {
+    const fb = getFirebaseUrl();
+    if (!fb) return null;
+    const r = await fetch(fb + FB_SESSIONS_PATH + '.json');
+    if (!r.ok) throw new Error('Firebase fetch failed: HTTP ' + r.status);
+    const data = await r.json();
+    if (!data || typeof data !== 'object') return {};
+    const out = {};
+    Object.values(data).forEach(entry => {
+        if (entry && entry.name && entry.payload) out[entry.name] = entry.payload;
+    });
+    return out;
+}
+
+async function uploadSessionToFirebase(name, payload) {
+    const fb = getFirebaseUrl();
+    if (!fb) return false;
+    try {
+        const r = await fetch(fb + FB_SESSIONS_PATH + '/' + sessionKey(name) + '.json', {
+            method: 'PUT',
+            body: JSON.stringify({ name, payload, updatedAt: Date.now() })
+        });
+        return r.ok;
+    } catch (e) { return false; }
+}
+
+async function deleteSessionFromFirebase(name) {
+    const fb = getFirebaseUrl();
+    if (!fb) return false;
+    try {
+        const r = await fetch(fb + FB_SESSIONS_PATH + '/' + sessionKey(name) + '.json',
+            { method: 'DELETE' });
+        return r.ok;
+    } catch (e) { return false; }
+}
+
+// Pull Firebase sessions into localStorage. Strategy: Firebase entries
+// take precedence (so updates from other devices win), but local-only
+// entries are kept (so unsynced offline saves aren't wiped).
+// Caveat: deletions made on another device don't propagate here -- the
+// "Refresh from cloud" button below does a full replace for that case.
+async function syncSessionsFromFirebase() {
+    try {
+        const fbSessions = await fetchSessionsFromFirebase();
+        if (fbSessions === null) return false;
+        const local = getAllSessions();
+        const merged = { ...local, ...fbSessions };
+        if (JSON.stringify(merged) !== JSON.stringify(local)) {
+            localStorage.setItem(KEYS.sessions, JSON.stringify(merged));
+            renderSessionUI();
+        }
+        return true;
+    } catch (e) { return false; }
+}
+
+// Full replace: drops local-only sessions and adopts whatever Firebase says.
+// Use this to propagate deletes from other devices.
+async function refreshSessionsFromCloud() {
+    try {
+        const fbSessions = await fetchSessionsFromFirebase();
+        if (fbSessions === null) { toast('Firebase URL not set.'); return; }
+        localStorage.setItem(KEYS.sessions, JSON.stringify(fbSessions));
+        renderSessionUI();
+        const n = Object.keys(fbSessions).length;
+        toast('Synced ' + n + ' session' + (n === 1 ? '' : 's') + ' from cloud.');
+    } catch (e) {
+        toast('Could not reach Firebase. Local sessions kept.');
+    }
+}
+
 function buildPayload() {
     return { settings: collectSettings(), teachers: teacherRows, sounds: collectSounds() };
 }
 
-function saveSession() {
+async function saveSession() {
     const name = document.getElementById('sessionNameInput').value.trim();
     if (!name) { toast('Enter a session name first.'); return; }
-    const sessions = getAllSessions(); sessions[name] = buildPayload();
+    const payload = buildPayload();
+    const sessions = getAllSessions(); sessions[name] = payload;
     localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
     localStorage.setItem(KEYS.active, name);
-    persist(); renderSessionUI(); toast(`Session "${name}" saved.`);
+    persist(); renderSessionUI();
+    const synced = await uploadSessionToFirebase(name, payload);
+    toast(synced
+        ? `Session "${name}" saved (available on all devices).`
+        : `Session "${name}" saved locally only — cloud sync failed.`);
 }
-function updateSession() {
+async function updateSession() {
     const name = getActiveName();
     if (!name) { toast('No active session — use Save to create one.'); return; }
-    const sessions = getAllSessions(); sessions[name] = buildPayload();
+    const payload = buildPayload();
+    const sessions = getAllSessions(); sessions[name] = payload;
     localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
-    persist(); toast(`Session "${name}" updated.`);
+    persist();
+    const synced = await uploadSessionToFirebase(name, payload);
+    toast(synced
+        ? `Session "${name}" updated (available on all devices).`
+        : `Session "${name}" updated locally only — cloud sync failed.`);
 }
 function loadSelectedSession() {
     const name = document.getElementById('sessionSelect').value;
@@ -184,14 +277,18 @@ function loadSelectedSession() {
     document.getElementById('sessionNameInput').value = name;
     persist(); renderSessionUI(); toast(`Session "${name}" loaded.`);
 }
-function deleteSelectedSession() {
+async function deleteSelectedSession() {
     const name = document.getElementById('sessionSelect').value;
     if (!name) { toast('Select a session to delete.'); return; }
-    if (!confirm(`Delete session "${name}"?`)) return;
+    if (!confirm(`Delete session "${name}" from all devices?`)) return;
     const sessions = getAllSessions(); delete sessions[name];
     localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
     if (getActiveName()===name) localStorage.removeItem(KEYS.active);
-    renderSessionUI(); toast(`Session "${name}" deleted.`);
+    renderSessionUI();
+    const synced = await deleteSessionFromFirebase(name);
+    toast(synced
+        ? `Session "${name}" deleted from all devices.`
+        : `Session "${name}" deleted locally only — cloud delete failed.`);
 }
 function exportSelectedSession() {
     const name = document.getElementById('sessionSelect').value;
@@ -212,7 +309,7 @@ function exportSelectedSession() {
 function importSession(ev) {
     const file = ev.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
         let data;
         try { data = JSON.parse(e.target.result); }
         catch { toast('That file is not valid JSON.'); ev.target.value = ''; return; }
@@ -233,8 +330,11 @@ function importSession(ev) {
         localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
         renderSessionUI();
         document.getElementById('sessionSelect').value = name;
-        toast(`Imported "${name}". Click Load to apply it.`);
         ev.target.value = '';
+        const synced = await uploadSessionToFirebase(name, data.payload);
+        toast(synced
+            ? `Imported "${name}" (available on all devices). Click Load to apply it.`
+            : `Imported "${name}" locally. Cloud sync failed — click Load to apply it.`);
     };
     reader.readAsText(file);
 }
@@ -878,6 +978,11 @@ function init() {
         document.getElementById(id).addEventListener('input', function(){ updateTimingPreview(); autosave(); }));
     document.getElementById('soundEndInterview').addEventListener('change', autosave);
     document.getElementById('soundEndBreak').addEventListener('change', autosave);
+
+    // Cloud-sync sessions from Firebase on load and every 30s so changes
+    // made on other devices appear here without manual refresh.
+    syncSessionsFromFirebase();
+    setInterval(syncSessionsFromFirebase, 30000);
 }
 
 init();
