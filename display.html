@@ -215,10 +215,56 @@
             0%, 100% { opacity: 1; transform: scale(1); }
             50%       { opacity: 0.45; transform: scale(0.75); }
         }
+
+        /* ── Audio unlock overlay ────────────────────── */
+        .audio-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            cursor: pointer;
+            text-align: center;
+            padding: 2rem;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .audio-overlay.show { display: flex; }
+        .audio-overlay-inner { max-width: 720px; }
+        .audio-icon {
+            font-size: clamp(4rem, 9vw, 7rem);
+            margin-bottom: 1.5rem;
+            animation: audioPulse 1.8s ease-in-out infinite;
+        }
+        .audio-msg {
+            font-size: clamp(1.5rem, 3vw, 2.4rem);
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 1rem;
+        }
+        .audio-sub {
+            font-size: clamp(0.9rem, 1.5vw, 1.15rem);
+            opacity: 0.78;
+            line-height: 1.55;
+        }
+        @keyframes audioPulse {
+            0%, 100% { transform: scale(1); }
+            50%       { transform: scale(1.1); }
+        }
     </style>
 </head>
 <body class="s-waiting">
 <button class="fs-btn" id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">&#x26F6;</button>
+
+<div id="audioOverlay" class="audio-overlay">
+    <div class="audio-overlay-inner">
+        <div class="audio-icon">&#128266;</div>
+        <div class="audio-msg">Tap or click anywhere<br>to enable chime sounds</div>
+        <div class="audio-sub">Browsers block audio until the page has been interacted with.<br>This is a one-time step per screen. You&rsquo;ll hear a short test chime when you tap.</div>
+    </div>
+</div>
 
     <!-- Header -->
     <header class="hdr">
@@ -362,12 +408,60 @@
         'Low Gong':         c => { _tone(c,'sine',110,0.6,0,1.5); _tone(c,'sine',220,0.25,0,0.8); },
         'High Ping':        c => { _tone(c,'sine',2093,0.45,0,0.2); }
     };
+    // Persistent AudioContext so every chime uses the same unlocked instance.
+    // Browsers require a user gesture before audio can play, so we listen for
+    // any click/tap/keypress and resume the context, hiding the overlay.
+    let _audioCtx = null;
+    let _audioUnlocked = false;
+    function _ensureAudioCtx() {
+        if (!_audioCtx) {
+            try { _audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+            catch (e) { return null; }
+        }
+        return _audioCtx;
+    }
     function _loadSounds() { return soundsConfig; }
     function _playSound(name) {
+        const ctx = _ensureAudioCtx();
+        if (!ctx) return;
         const fn = SOUND_DEFS[name] || SOUND_DEFS['Descending Chime'];
-        try { const ctx = new (window.AudioContext||window.webkitAudioContext)(); fn(ctx); }
-        catch(e) { console.warn('Audio:', e); }
+        const fire = () => { try { fn(ctx); } catch (e) { console.warn('Audio:', e); } };
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(fire).catch(() => {});
+        } else {
+            fire();
+        }
     }
+    function _unlockAudio() {
+        const ctx = _ensureAudioCtx();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        if (ctx.state === 'running' && !_audioUnlocked) {
+            _audioUnlocked = true;
+            const overlay = document.getElementById('audioOverlay');
+            if (overlay) overlay.classList.remove('show');
+            // Confirmation chime: play the user's chosen end-of-interview sound
+            // so they hear exactly what they'll get during the event.
+            const s = _loadSounds();
+            const fn = SOUND_DEFS[s.endInterview] || SOUND_DEFS['Descending Chime'];
+            try { fn(ctx); } catch (e) {}
+        }
+    }
+    function _checkAudioState() {
+        const overlay = document.getElementById('audioOverlay');
+        if (!overlay) return;
+        const ctx = _ensureAudioCtx();
+        if (!ctx || ctx.state !== 'running') {
+            _audioUnlocked = false;
+            overlay.classList.add('show');
+        } else if (_audioUnlocked) {
+            overlay.classList.remove('show');
+        }
+    }
+    document.addEventListener('click', _unlockAudio);
+    document.addEventListener('touchstart', _unlockAudio, { passive: true });
+    document.addEventListener('keydown', _unlockAudio);
+
     function playEndOfInterview() {
         const s = _loadSounds();
         _playSound(s.endInterview || 'Descending Chime');
@@ -548,6 +642,10 @@
         // Online teachers (if Firebase configured)
         pollOnline();
         setInterval(pollOnline, 5000);
+
+        // Audio: prompt for tap-to-unlock if context is suspended (autoplay policy)
+        _checkAudioState();
+        setInterval(_checkAudioState, 5000);
     }
 
     // ── Fullscreen ────────────────────────────────────────────────
