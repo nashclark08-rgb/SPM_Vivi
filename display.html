@@ -324,6 +324,11 @@
             onerror="document.getElementById('qrWrap').style.display='none'"></script>
 
     <script>
+    // Trinity Anglican College Firebase default (matches admin.js).
+    // Used to shorten the rooms QR URL when the page wasn't given one
+    // via hash payload or localStorage.
+    const DEFAULT_FIREBASE_URL = 'https://spmvivi-d8f6b-default-rtdb.firebaseio.com';
+
     // ── Storage ───────────────────────────────────────────────────────
     // Display can be launched two ways:
     //   1. From admin on the same PC -- reads localStorage
@@ -364,6 +369,51 @@
         };
     }
     let teachersForQR = [], soundsConfig = {}, fbUrlOverride = '';
+
+    // Upload payload to Firebase and return a SHORT URL the rooms QR can
+    // encode comfortably. Falls back to the long embedded-hash URL if
+    // Firebase is unreachable.
+    async function buildRoomsUrl(base, payload, fbUrl) {
+        if (fbUrl) {
+            try {
+                const r = await fetch(fbUrl.replace(/\/$/,'') + '/pti-rooms.json', {
+                    method: 'POST',
+                    body: JSON.stringify({ data: payload, createdAt: Date.now() })
+                });
+                if (r.ok) {
+                    const j = await r.json();
+                    if (j && j.name) {
+                        return base + 'rooms.html?r=' + encodeURIComponent(j.name) +
+                                      '&fb=' + encodeURIComponent(fbUrl);
+                    }
+                }
+            } catch (e) {}
+        }
+        try {
+            return base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+        } catch (e) { return base + 'rooms.html'; }
+    }
+
+    // Render a QR into the given container. Falls back to api.qrserver.com
+    // if qrcodejs throws (e.g. text too long for its capacity).
+    function renderQrInto(container, text, size) {
+        container.innerHTML = '';
+        try {
+            new QRCode(container, {
+                text, width: size, height: size,
+                colorDark: '#000000', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.L
+            });
+            // Sanity check: qrcodejs sometimes silently produces an empty render
+            if (container.querySelector('img') || container.querySelector('canvas')) return;
+        } catch (e) {}
+        const img = document.createElement('img');
+        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size +
+                  '&data=' + encodeURIComponent(text) + '&qzone=1';
+        img.width = size; img.height = size;
+        img.alt = 'QR Code';
+        container.appendChild(img);
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────
     function pad(n) { return String(Math.max(0, Math.floor(n))).padStart(2, '0'); }
@@ -579,12 +629,12 @@
     }
 
     // ── Init ──────────────────────────────────────────────────────────
-    function init() {
+    async function init() {
         const conf = loadConfig();
         cfg           = conf.cfg;
         teachersForQR = conf.teachers;
         soundsConfig  = conf.sounds;
-        fbUrlOverride = conf.firebaseUrl;
+        fbUrlOverride = conf.firebaseUrl || DEFAULT_FIREBASE_URL;
 
         // Apply branding
         if (cfg.primaryColour)   document.documentElement.style.setProperty('--primary', cfg.primaryColour);
@@ -601,38 +651,22 @@
             document.getElementById('watermark').src = cfg.logoDataUrl;
         }
 
-        // QR code — embed teacher data + timing in URL hash so phones (with empty localStorage) work
+        // QR code — short Firebase URL when available, falls back to embedded hash
         const base = window.location.href.replace(/[^/]*$/, '');
-        let roomsUrl = base + 'rooms.html';
-        try {
-            const payload = {
-                t:  teachersForQR.map(t => ({ n: t.name || '', s: t.subject || '', r: t.room || '' })),
-                sn: cfg.schoolName    || '',
-                ev: cfg.sessionName   || '',
-                p:  cfg.primaryColour   || '#003B5C',
-                sc: cfg.secondaryColour || '#FFFFFF',
-                st: cfg.startTime          || '',
-                iv: cfg.interviewDuration  || 0,
-                bk: cfg.breakDuration      || 0,
-                ni: cfg.numberOfInterviews || 0,
-                fb: fbUrlOverride || ''
-            };
-            const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-            roomsUrl = base + 'rooms.html#' + encoded;
-        } catch(e) { /* fall back to plain URL */ }
-
-        try {
-            new QRCode(document.getElementById('qrcode'), {
-                text: roomsUrl,
-                width: 148,
-                height: 148,
-                colorDark: '#000000',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.L
-            });
-        } catch (e) {
-            document.getElementById('qrWrap').style.display = 'none';
-        }
+        const payload = {
+            t:  teachersForQR.map(t => ({ n: t.name || '', s: t.subject || '', r: t.room || '' })),
+            sn: cfg.schoolName    || '',
+            ev: cfg.sessionName   || '',
+            p:  cfg.primaryColour   || '#003B5C',
+            sc: cfg.secondaryColour || '#FFFFFF',
+            st: cfg.startTime          || '',
+            iv: cfg.interviewDuration  || 0,
+            bk: cfg.breakDuration      || 0,
+            ni: cfg.numberOfInterviews || 0,
+            fb: fbUrlOverride || ''
+        };
+        const roomsUrl = await buildRoomsUrl(base, payload, fbUrlOverride);
+        renderQrInto(document.getElementById('qrcode'), roomsUrl, 180);
 
         tick();
         // Align to the next whole-second boundary so this display and

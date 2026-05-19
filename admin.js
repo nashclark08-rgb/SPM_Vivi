@@ -3,6 +3,12 @@ const KEYS = {
     sessions:'pti_sessions_v2', active:'pti_active_session'
 };
 
+// Trinity Anglican College's Firebase Realtime Database. Hardcoded as a
+// default so fresh browsers / cleared caches / new devices auto-populate
+// the field without the user needing to paste-and-save it every time.
+// If anyone forks this repo for another school, change this constant.
+const DEFAULT_FIREBASE_URL = 'https://spmvivi-d8f6b-default-rtdb.firebaseio.com';
+
 const PANTONE = {
     '100':'#F4ED7C','101':'#F4ED47','102':'#F6EB15','103':'#C6AD0E','104':'#AE9B1C','105':'#896E2A',
     '106':'#FAE910','107':'#FAE214','108':'#F7D900','109':'#F4CC00','110':'#E6A800','111':'#C28E00','112':'#B58200',
@@ -387,7 +393,16 @@ function uploadCSV(e) {
 }
 
 // ── Firebase / Online Teacher Status ─────────────────────────────
-function getFirebaseUrl() { return (localStorage.getItem('pti_firebase_url')||'').replace(/\/$/,''); }
+// Returns the saved URL if present, otherwise the hardcoded default
+// (and persists the default so subsequent calls are consistent).
+function getFirebaseUrl() {
+    let url = (localStorage.getItem('pti_firebase_url')||'').replace(/\/$/,'');
+    if (!url) {
+        url = DEFAULT_FIREBASE_URL;
+        localStorage.setItem('pti_firebase_url', url);
+    }
+    return url;
+}
 
 function saveFirebaseConfig() {
     const url = document.getElementById('firebaseUrl').value.trim().replace(/\/$/,'');
@@ -578,7 +593,7 @@ async function printParentSheet() {
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
     const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     const base = window.location.href.replace(/[^/]*$/, '');
-    const fbUrl = (localStorage.getItem('pti_firebase_url') || '').replace(/\/$/, '');
+    const fbUrl = getFirebaseUrl();
 
     const payload = {
         t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
@@ -644,7 +659,7 @@ async function downloadWordDoc() {
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
     const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     const base = window.location.href.replace(/[^/]*$/, '');
-    const fbUrl = (localStorage.getItem('pti_firebase_url') || '').replace(/\/$/, '');
+    const fbUrl = getFirebaseUrl();
 
     const payload = {
         t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
@@ -794,7 +809,7 @@ function buildDisplayUrl() {
         ni: s.numberOfInterviews || 0,
         t:  teacherRows.map(t => ({ n: t.name||'', s: t.subject||'', r: t.room||'' })),
         so: collectSounds(),
-        fb: localStorage.getItem('pti_firebase_url') || ''
+        fb: getFirebaseUrl()
     };
     const base = window.location.href.replace(/[^/]*$/, '');
     return base + 'display.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
