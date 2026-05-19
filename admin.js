@@ -493,6 +493,56 @@ function validate() {
     return true;
 }
 
+// ── QR helpers ────────────────────────────────────────────────────
+// qrcodejs has a hard byte-capacity limit (~2953 chars at level L) and silently
+// fails for longer URLs — common once you have ~40+ teachers since the rooms
+// payload is embedded in the URL hash. Fallback uses a server-side generator
+// that handles long URLs reliably.
+function _qrCodeJsDataUrl(text, size) {
+    if (typeof QRCode === 'undefined') return '';
+    const tmp = document.createElement('div');
+    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+    document.body.appendChild(tmp);
+    let result = '';
+    try {
+        new QRCode(tmp, { text, width: size, height: size,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.L });
+        const imgEl = tmp.querySelector('img');
+        if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) {
+            result = imgEl.src;
+        } else {
+            const canvasEl = tmp.querySelector('canvas');
+            if (canvasEl) { try { result = canvasEl.toDataURL('image/png'); } catch(e) {} }
+        }
+    } catch (e) {}
+    document.body.removeChild(tmp);
+    return result;
+}
+function _qrServerUrl(text, size) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&qzone=1`;
+}
+function getQrImageHTML(text, size) {
+    const dataUrl = _qrCodeJsDataUrl(text, size);
+    const src = dataUrl || _qrServerUrl(text, size);
+    return `<img src="${src}" width="${size}" height="${size}" alt="QR Code" style="display:block;margin:0 auto;">`;
+}
+async function getQrDataUrl(text, size) {
+    const dataUrl = _qrCodeJsDataUrl(text, size);
+    if (dataUrl) return dataUrl;
+    try {
+        const r = await fetch(_qrServerUrl(text, size));
+        if (!r.ok) return '';
+        const blob = await r.blob();
+        return await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) { return ''; }
+}
+
 // ── Print A4 Parent Sheet ─────────────────────────────────────────
 function printParentSheet() {
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
@@ -511,26 +561,11 @@ function printParentSheet() {
         roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     } catch(e) {}
 
-    let qrDataUrl = '';
-    const tmp = document.createElement('div');
-    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-    document.body.appendChild(tmp);
-    try {
-        new QRCode(tmp, { text: roomsUrl, width: 280, height: 280,
-            colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.L });
-        const imgEl = tmp.querySelector('img');
-        if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) {
-            qrDataUrl = imgEl.src;
-        }
-    } catch(e) {}
-    document.body.removeChild(tmp);
+    const qrHtml = getQrImageHTML(roomsUrl, 280);
 
     const primary = s.primaryColour || '#003B5C';
     const eventName = s.sessionName || s.schoolName || 'Parent Teacher Interviews';
     const rows = sorted.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.subject)}</td><td>${esc(t.room)}</td></tr>`).join('');
-    const qrHtml = qrDataUrl
-        ? `<img src="${qrDataUrl}" width="280" height="280" alt="QR Code" style="display:block;margin:0 auto;">`
-        : `<p style="font-size:11px;color:#999;">Scan: ${esc(roomsUrl)}</p>`;
 
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PTI Parent Sheet</title><style>
@@ -567,7 +602,7 @@ ${qrHtml}
 }
 
 // ── Word Doc Export ───────────────────────────────────────────────
-function downloadWordDoc() {
+async function downloadWordDoc() {
     const s = JSON.parse(localStorage.getItem(KEYS.settings) || '{}');
     const sorted = [...teacherRows].filter(t=>t.name||t.room).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     const base = window.location.href.replace(/[^/]*$/, '');
@@ -584,16 +619,7 @@ function downloadWordDoc() {
         roomsUrl = base + 'rooms.html#' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     } catch(e) {}
 
-    let qrDataUrl = '';
-    const tmp = document.createElement('div');
-    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-    document.body.appendChild(tmp);
-    try {
-        new QRCode(tmp, { text: roomsUrl, width: 220, height: 220, colorDark:'#000000', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.L });
-        const imgEl = tmp.querySelector('img');
-        if (imgEl && imgEl.src && imgEl.src.startsWith('data:')) qrDataUrl = imgEl.src;
-    } catch(e) {}
-    document.body.removeChild(tmp);
+    const qrDataUrl = await getQrDataUrl(roomsUrl, 220);
 
     const primary    = s.primaryColour || '#003B5C';
     const schoolName = s.schoolName || 'Student Progress Meetings';
@@ -601,7 +627,7 @@ function downloadWordDoc() {
     const logoHtml   = s.logoDataUrl ? `<img src="${s.logoDataUrl}" style="height:55pt;display:block;margin:0 auto 8pt;" alt="">` : '';
     const qrHtml     = qrDataUrl
         ? `<img src="${qrDataUrl}" width="180" height="180" style="display:block;margin:0 auto;" alt="QR Code">`
-        : `<p style="color:#999;font-size:9pt;">QR unavailable — save settings first.</p>`;
+        : `<p style="color:#999;font-size:9pt;">QR unavailable — both qrcodejs and the fallback generator failed (check internet).</p>`;
     const rows = sorted.map(t =>
         `<tr><td style="padding:5pt 8pt;border-bottom:1pt solid #EEEEEE;font-size:10pt;">${esc(t.name||'')}</td>` +
         `<td style="padding:5pt 8pt;border-bottom:1pt solid #EEEEEE;font-size:10pt;">${esc(t.subject||'')}</td>` +
