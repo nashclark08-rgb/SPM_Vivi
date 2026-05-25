@@ -608,6 +608,7 @@ function collectSettings() {
         schoolName: document.getElementById('schoolName').value.trim(), logoDataUrl,
         primaryColour: document.getElementById('primaryColour').value,
         secondaryColour: document.getElementById('secondaryColour').value,
+        thirdColour: document.getElementById('thirdColour').value,
         startTime:start, finishTime:finish, interviewDuration:iv, breakDuration:brk,
         numberOfInterviews:(start&&finish&&iv)?calcN(start,finish,iv,brk):0
     };
@@ -618,6 +619,7 @@ function applySettings(s) {
     if(s.schoolName)        document.getElementById('schoolName').value=s.schoolName;
     if(s.primaryColour)  { document.getElementById('primaryColour').value=s.primaryColour; document.getElementById('primaryHex').textContent=s.primaryColour; }
     if(s.secondaryColour){ document.getElementById('secondaryColour').value=s.secondaryColour; document.getElementById('secondaryHex').textContent=s.secondaryColour; }
+    if(s.thirdColour)    { document.getElementById('thirdColour').value=s.thirdColour;       document.getElementById('thirdHex').textContent=s.thirdColour; }
     if(s.startTime)         document.getElementById('startTime').value=s.startTime;
     if(s.finishTime)        document.getElementById('finishTime').value=s.finishTime;
     if(s.interviewDuration) document.getElementById('interviewDuration').value=s.interviewDuration;
@@ -727,7 +729,7 @@ async function printParentSheet() {
     const payload = {
         t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
         sn:s.schoolName||'', ev:s.sessionName||'',
-        p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
+        p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF', tc:s.thirdColour||'#B89B5E',
         st:s.startTime||'', iv:s.interviewDuration||0,
         bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
         fb: fbUrl
@@ -793,7 +795,7 @@ async function downloadWordDoc() {
     const payload = {
         t: sorted.map(t=>({n:t.name||'',s:t.subject||'',r:t.room||''})),
         sn:s.schoolName||'', ev:s.sessionName||'',
-        p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF',
+        p:s.primaryColour||'#003B5C', sc:s.secondaryColour||'#FFFFFF', tc:s.thirdColour||'#B89B5E',
         st:s.startTime||'', iv:s.interviewDuration||0,
         bk:s.breakDuration||0, ni:s.numberOfInterviews||0,
         fb: fbUrl
@@ -955,6 +957,7 @@ function buildDisplayUrl() {
         ev: '',
         p:  s.primaryColour   || '#003B5C',
         sc: s.secondaryColour || '#FFFFFF',
+        tc: s.thirdColour     || '#B89B5E',
         lg: s.logoDataUrl   || '',
         st: s.startTime          || '',
         iv: s.interviewDuration  || 0,
@@ -1012,8 +1015,14 @@ function init() {
 
     bindPMSInput('primaryPMS','primaryColour','primaryHex','primaryPMSStatus','primaryPMSSwatch');
     bindPMSInput('secondaryPMS','secondaryColour','secondaryHex','secondaryPMSStatus','secondaryPMSSwatch');
+    bindPMSInput('thirdPMS','thirdColour','thirdHex','thirdPMSStatus','thirdPMSSwatch');
     bindHexInput('primaryHEX','primaryColour','primaryHex','primaryHEXSwatch');
     bindHexInput('secondaryHEX','secondaryColour','secondaryHex','secondaryHEXSwatch');
+    bindHexInput('thirdHEX','thirdColour','thirdHex','thirdHEXSwatch');
+    document.getElementById('thirdColour').addEventListener('input', function() {
+        document.getElementById('thirdHex').textContent = this.value;
+        autosave();
+    });
     document.getElementById('schoolName').addEventListener('input', function(){ updateBrandingPreview(); autosave(); });
     document.getElementById('primaryColour').addEventListener('input', function() {
         document.getElementById('primaryHex').textContent = this.value;
