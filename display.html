@@ -84,9 +84,11 @@
             z-index: 1;
         }
 
-        /* Active timer view: timer stays centred via flex, status-label
-           and .sub are pulled out of the watermark band via absolute positioning. */
-        #timerView { display: none; text-align: center; position: relative; z-index: 2; }
+        /* Active timer view: timer stays centred via flex flow; status-label
+           and .sub are pulled out of the watermark band by being absolutely
+           positioned against .main (the nearest positioned ancestor — that's
+           why #timerView itself is NOT position:relative). */
+        #timerView { display: none; text-align: center; }
 
         .status-label {
             font-size: clamp(1.4rem, 3.8vw, 3.2rem);
@@ -94,11 +96,11 @@
             text-transform: uppercase;
             letter-spacing: 0.1em;
             opacity: 0.88;
-            margin-bottom: 0.3rem;
             position: absolute;
-            top: 6vh;
+            top: 3vh;
             left: 0; right: 0;
             text-align: center;
+            z-index: 2;
         }
 
         .timer {
@@ -110,15 +112,17 @@
             text-shadow: 0 6px 30px rgba(0,0,0,0.25);
             -webkit-text-stroke: 2px rgba(255,255,255,0.55);
             paint-order: stroke fill;
+            position: relative;
+            z-index: 2;
         }
 
         .sub {
-            margin-top: 1.4rem;
             opacity: 0.82;
             text-align: center;
             position: absolute;
-            bottom: 6vh;
+            bottom: 3vh;
             left: 0; right: 0;
+            z-index: 2;
         }
         .next-time {
             font-size: clamp(0.9rem, 2.2vw, 1.6rem);
