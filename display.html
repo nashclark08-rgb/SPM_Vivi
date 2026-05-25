@@ -36,6 +36,7 @@
             padding: 0.85rem 1.75rem;
             background: rgba(0,0,0,0.18);
             flex-shrink: 0;
+            transition: background-color 1s linear, color 1s linear;
         }
         .hdr img { height: 46px; width: auto; display: none; }
         .hdr-text { display: flex; flex-direction: column; gap: 0.05rem; }
@@ -270,6 +271,14 @@
     </style>
 </head>
 <body class="s-waiting">
+<!-- SVG filter used to tint the watermark logo to the school's primary colour on the break screen -->
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
+    <filter id="wmTint" color-interpolation-filters="sRGB">
+        <feFlood id="wmTintFlood" flood-color="#003B5C" result="flood"/>
+        <feComposite in="flood" in2="SourceGraphic" operator="in"/>
+    </filter>
+</svg>
+
 <button class="fs-btn" id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">&#x26F6;</button>
 
 <div id="audioOverlay" class="audio-overlay">
@@ -455,6 +464,20 @@
     // ── Helpers ───────────────────────────────────────────────────────
     function pad(n) { return String(Math.max(0, Math.floor(n))).padStart(2, '0'); }
 
+    // Lerp between two hex colours. Used to fade the top ribbon between
+    // primary and secondary over the duration of each interview.
+    function _parseHex(hex) {
+        const h = (hex || '').replace('#', '');
+        if (h.length !== 6) return { r: 0, g: 0, b: 0 };
+        return { r: parseInt(h.slice(0,2), 16), g: parseInt(h.slice(2,4), 16), b: parseInt(h.slice(4,6), 16) };
+    }
+    function lerpHex(c1, c2, t) {
+        const a = _parseHex(c1), b = _parseHex(c2);
+        const k = Math.max(0, Math.min(1, t));
+        const m = (x, y) => Math.round(x + (y - x) * k);
+        return `rgb(${m(a.r, b.r)}, ${m(a.g, b.g)}, ${m(a.b, b.b)})`;
+    }
+
     function fmtCountdown(secs) {
         const s = Math.max(0, Math.round(secs));
         return `${pad(s / 60)}:${pad(s % 60)}`;
@@ -629,26 +652,46 @@
         document.body.className = `s-${state.phase}`;
         const wm = document.getElementById('watermark');
         const fuse = document.getElementById('fuseBar');
+        const hdr = document.querySelector('.hdr');
+        const primary   = cfg.primaryColour   || '#003B5C';
+        const secondary = cfg.secondaryColour || '#FFFFFF';
         if (state.phase === 'interview') {
-            document.body.style.background = cfg.primaryColour  || '#003B5C';
-            document.body.style.color      = cfg.secondaryColour || '#FFFFFF';
+            document.body.style.background = primary;
+            document.body.style.color      = secondary;
             wm.style.display = 'block';
+            wm.style.filter  = '';
+            wm.style.opacity = '';
             const ivSecs = (cfg.interviewDuration || 0) * 60;
             const progress = ivSecs > 0 ? 1 - (state.timeLeft / ivSecs) : 0;
             fuse.style.display = 'block';
             fuse.style.transform = `scaleX(${Math.min(1, Math.max(0, progress))})`;
+            // Ribbon timer: fade between primary and secondary; direction
+            // alternates each interview (odd: primary→secondary, even: reverse).
+            const odd = (state.interviewNumber % 2) === 1;
+            const startC = odd ? primary   : secondary;
+            const endC   = odd ? secondary : primary;
+            hdr.style.background = lerpHex(startC, endC, progress);
+            hdr.style.color      = lerpHex(endC, startC, progress);
         } else if (state.phase === 'break') {
-            document.body.style.background = cfg.secondaryColour || '#FFFFFF';
-            document.body.style.color      = cfg.primaryColour   || '#003B5C';
+            document.body.style.background = secondary;
+            document.body.style.color      = primary;
             wm.style.display = 'block';
+            wm.style.filter  = 'url(#wmTint)';
+            wm.style.opacity = '0.14';
             fuse.style.display = 'none';
             fuse.style.transform = 'scaleX(0)';
+            hdr.style.background = '';
+            hdr.style.color      = '';
         } else {
             document.body.style.background = '';
             document.body.style.color      = '';
             wm.style.display = 'none';
+            wm.style.filter  = '';
+            wm.style.opacity = '';
             fuse.style.display = 'none';
             fuse.style.transform = 'scaleX(0)';
+            hdr.style.background = '';
+            hdr.style.color      = '';
         }
 
         if (state.phase === 'waiting') {
@@ -687,7 +730,11 @@
         setInterval(_syncServerTime, 60000);
 
         // Apply branding
-        if (cfg.primaryColour)   document.documentElement.style.setProperty('--primary', cfg.primaryColour);
+        if (cfg.primaryColour) {
+            document.documentElement.style.setProperty('--primary', cfg.primaryColour);
+            const wmFlood = document.getElementById('wmTintFlood');
+            if (wmFlood) wmFlood.setAttribute('flood-color', cfg.primaryColour);
+        }
         if (cfg.secondaryColour) {
             document.documentElement.style.setProperty('--secondary', cfg.secondaryColour);
             document.body.style.color = cfg.secondaryColour;
